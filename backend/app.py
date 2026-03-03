@@ -6,6 +6,7 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.preprocess import full_preprocess, get_sentiment_scores
 from utils.monitor import log_prediction, get_monitoring_report
+from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
 
 app  = Flask(__name__)
 CORS(app)
@@ -102,6 +103,24 @@ def monitor():
     return jsonify(report)
 
 
+@app.route('/api/analyze-face', methods=['POST'])
+def analyze_face():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    if 'image_base64' in data:
+        result = analyze_face_from_base64(data['image_base64'])
+        return jsonify(result), 200
+
+    if data.get('use_webcam'):
+        result = capture_webcam_frame()
+        return jsonify(result), 200
+
+    return jsonify({"error": "Provide image_base64 or use_webcam:true"}), 400
+
+
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
@@ -111,5 +130,6 @@ if __name__ == '__main__':
     print("    POST /api/predict")
     print("    GET  /api/stats")
     print("    GET  /api/monitor")
+    print("    POST /api/analyze-face")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
