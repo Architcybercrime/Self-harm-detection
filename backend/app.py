@@ -5,6 +5,7 @@ import numpy as np
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.preprocess import full_preprocess, get_sentiment_scores
+from utils.monitor import log_prediction, get_monitoring_report
 
 app  = Flask(__name__)
 CORS(app)
@@ -63,6 +64,13 @@ def predict():
         "confidence": confidence
     })
 
+    log_prediction(
+        text_length=len(text.split()),
+        risk_level=risk_level,
+        confidence=confidence,
+        sentiment_score=round(sentiment, 4)
+    )
+
     return jsonify({
         "risk_level":      risk_level,
         "confidence":      confidence,
@@ -88,6 +96,12 @@ def stats():
     })
 
 
+@app.route('/api/monitor', methods=['GET'])
+def monitor():
+    report = get_monitoring_report()
+    return jsonify(report)
+
+
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
@@ -96,5 +110,6 @@ if __name__ == '__main__':
     print("    GET  /api/health")
     print("    POST /api/predict")
     print("    GET  /api/stats")
+    print("    GET  /api/monitor")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
