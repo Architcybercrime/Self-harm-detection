@@ -1,0 +1,166 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { 
+  overflow-x: hidden; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333; 
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  line-height: 1.6;
+}
+
+.hero {
+  height: 100vh; 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  text-align: center;
+}
+
+.hero-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(45deg, #a8edea 0%, #fed6e3 50%, #667eea 100%);
+  animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.hero-content { 
+  z-index: 2; 
+  max-width: 800px; 
+  padding: 2rem; 
+}
+
+h1 { 
+  font-size: 4rem; 
+  background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+}
+
+.fade-in { 
+  animation: fadeInUp 1.5s ease-out; 
+}
+
+.fade-in-delay { 
+  animation: fadeInUp 1.5s ease-out 0.3s both; 
+}
+
+@keyframes fadeInUp { 
+  from { opacity: 0; transform: translateY(30px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+.cta-btn { 
+  background: linear-gradient(45deg, #4facfe, #00f2fe);
+  border: none; 
+  padding: 1rem 3rem; 
+  font-size: 1.2rem; 
+  border-radius: 50px;
+  cursor: pointer; 
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+  color: white;
+  font-weight: bold;
+}
+
+.cta-btn:hover { 
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(79, 172, 254, 0.6);
+}
+
+.section { 
+  min-height: 100vh; 
+  padding: 8rem 2rem; 
+  display: flex;
+  align-items: center;
+}
+
+.container { 
+  max-width: 900px; 
+  margin: 0 auto; 
+  text-align: center;
+}
+
+h2 { 
+  font-size: 3rem; 
+  margin-bottom: 3rem; 
+  color: white;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.progress-bar {
+  width: 100%; 
+  height: 12px; 
+  background: rgba(255,255,255,0.3);
+  border-radius: 10px; 
+  margin-bottom: 3rem; 
+  overflow: hidden;
+}
+
+#progress { 
+  height: 100%; 
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+  transition: width 0.5s ease;
+  border-radius: 10px;
+}
+
+#quizForm label {
+  display: block;
+  background: rgba(255,255,255,0.95);
+  margin: 1rem 0;
+  padding: 1.5rem;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+#quizForm label:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+#quizForm input[type="radio"] {
+  margin-right: 1rem;
+}
+
+.result-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin: 3rem 0;
+}
+
+.result-card {
+  background: rgba(255,255,255,0.95);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  text-align: left;
+}
+
+.alert { 
+  background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+  color: white; 
+  padding: 1.5rem; 
+  border-radius: 15px;
+  margin-top: 1rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@media (max-width: 768px) {
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 2rem; }
+  .section { padding: 4rem 1rem; }
+}

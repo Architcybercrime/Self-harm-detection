@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mindful Assessment | Mental Health Self-Detection</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Hero Section (Charles Leclerc style layout) -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <h1 class="fade-in">Mindful Assessment</h1>
+      <p class="fade-in-delay">In our hyper-connected world, social media connects us all—but it's quietly eroding mental health. Track your emotional state, identify thinking patterns, and receive timely alerts to stay balanced.</p>
+      <button onclick="scrollToQuiz()" class="cta-btn">Begin Assessment</button>
+    </div>
+  </section>
+
+  <!-- Quiz Section -->
+  <section id="quiz" class="section">
+    <div class="container">
+      <h2 class="fade-in">Assess Your Mental State</h2>
+      <div class="progress-bar">
+        <div id="progress"></div>
+      </div>
+      <form id="quizForm"></form>
+      <button id="submitQuiz" class="cta-btn" style="display:none;">Get Results</button>
+    </div>
+  </section>
+
+  <!-- Results Section -->
+  <section id="results" class="section" style="display:none;">
+    <div class="container">
+      <h2 class="fade-in">Your Assessment Results</h2>
+      <div id="resultContent" class="result-cards"></div>
+      <button onclick="restartQuiz()" class="cta-btn">New Assessment</button>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
