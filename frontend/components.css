@@ -1,0 +1,292 @@
+/* ============================================================
+   components.css
+   PURPOSE: Styles for reusable UI components that appear
+   across multiple sections — cursor, navbar, hero, CTA button.
+   These are "always on screen" elements.
+   ============================================================ */
+
+
+/* ── CUSTOM CURSOR ──────────────────────────────────────── */
+/*
+  HOW IT WORKS:
+  1. body { cursor: none } hides the real cursor (in base.css)
+  2. This div follows the mouse via JavaScript
+  3. mix-blend-mode: difference → inverts colours it passes over
+     (white cursor becomes black on light BG, black on dark BG)
+  4. pointer-events: none → clicks pass through to elements below
+  5. The .big class enlarges it on hover of interactive elements
+*/
+#cursor {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  background: var(--text);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%); /* centre on mouse position */
+  transition: width 0.2s ease, height 0.2s ease;
+  mix-blend-mode: difference;
+}
+#cursor.big {
+  width: 40px;
+  height: 40px;
+}
+
+
+/* ── NAVIGATION ─────────────────────────────────────────── */
+/*
+  Leclerc's nav is unusual:
+  - Logo is in a WHITE BOX (stands out on dark images)
+  - "CHAPTERS" text and hamburger use mix-blend-mode:difference
+    so they're always readable regardless of section colour
+  - pointer-events: none on nav itself, then re-enabled on
+    children so the layout doesn't block scrolling
+*/
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 32px;
+  pointer-events: none; /* let scroll events pass through */
+}
+
+/* The white box logo (top-left) */
+.nav-logo {
+  pointer-events: all;
+  background: var(--white);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.nav-logo .brand-abbr {
+  font-family: var(--condensed);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1;
+}
+.nav-logo .brand-num {
+  font-family: var(--condensed);
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.nav-logo .brand-num span {
+  color: var(--red);
+  font-size: 36px;
+}
+
+/* Right side nav items */
+.nav-right {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  /* This combo makes the nav text always visible:
+     filter:invert(1) makes white→black and vice versa,
+     mix-blend-mode:difference applies the inversion
+     relative to the background content below */
+  mix-blend-mode: difference;
+  filter: invert(1);
+}
+.nav-chapters {
+  font-family: var(--condensed);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--white);
+}
+.nav-chapters svg { width: 12px; height: 12px; fill: currentColor; }
+
+/* Hamburger menu icon (two lines) */
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px;
+}
+.nav-menu span {
+  display: block;
+  width: 28px;
+  height: 2px;
+  background: var(--white);
+}
+
+
+/* ── HERO SECTION ───────────────────────────────────────── */
+/*
+  KEY TECHNIQUE: Full-viewport section with dark image background.
+  The text sits at the BOTTOM (justify-content: flex-end).
+  Text is enormous and has no side padding → bleeds off screen.
+*/
+#hero {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* Dark photo background layer */
+.hero-bg {
+  position: absolute;
+  inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0 */
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 100%),
+    radial-gradient(ellipse 120% 100% at 60% 30%,
+      #8B6914 0%, #5C4A1E 20%, #2A1F0A 50%, #0D0D0D 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+/* Film grain overlay */
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/*
+  THE HERO TITLE — the signature element of this design.
+
+  clamp(min, preferred, max) explained:
+  clamp(100px, 20vw, 220px)
+  → 100px minimum (small phones)
+  → 20vw preferred (20% of viewport width)  
+  → 220px maximum (large monitors)
+  This makes font size fluid without media queries.
+
+  line-height: 0.85 → lines closer together than normal (1.0)
+  This creates the dense, stacked editorial look.
+*/
+.hero-title {
+  position: relative;
+  z-index: 2;
+  font-family: var(--condensed);
+  font-size: clamp(100px, 20vw, 220px);
+  font-weight: 900;
+  line-height: 0.85;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: var(--white);
+  padding: 0 0 16px 24px; /* only left padding, text can bleed right */
+  text-shadow: 0 2px 40px rgba(0,0,0,0.3);
+}
+
+/*
+  SCROLL TRANSITION OVERLAY
+  This div starts transparent (opacity:0).
+  GSAP animates it to opacity:1 as you scroll through the hero.
+  It creates the "image fades to colourful gradient" effect
+  you see transitioning from frame 1 to frame 2 in the video.
+*/
+.hero-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    #B8D4E8 0%,
+    #E8C4A0 25%,
+    #D4A0B8 50%,
+    #A0C4D4 75%,
+    #C4B8D4 100%
+  );
+  opacity: 0; /* controlled by GSAP in main.js */
+  pointer-events: none;
+}
+
+/* "SCROLL TO EXPLORE" indicator at the bottom of hero */
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.hero-scroll-label {
+  font-family: var(--condensed);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+/*
+  The animated line that grows downward.
+  transform-origin: top → grows from top to bottom.
+  scaleY(0) → invisible; scaleY(1) → full height.
+*/
+.hero-scroll-line {
+  width: 1px;
+  height: 60px;
+  background: var(--white);
+  transform-origin: top;
+  animation: scrollAnim 2s ease infinite;
+}
+@keyframes scrollAnim {
+  0%   { transform: scaleY(0); opacity: 1; }
+  80%  { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+
+/* ── FIXED CTA BUTTON (bottom-right) ────────────────────── */
+/*
+  Exactly like Leclerc's "+ KNOW THE MAN" button.
+  It stays fixed in the corner on every section.
+  Teal/cyan background — deliberately jarring,
+  makes it impossible to miss.
+*/
+.hero-cta {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 400;
+  background: var(--teal);
+  color: var(--dark);
+  font-family: var(--condensed);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+.hero-cta:hover { background: #4AB8B8; }
+.hero-cta .plus {
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+}

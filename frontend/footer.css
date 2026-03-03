@@ -1,0 +1,183 @@
+/* ============================================================
+   footer.css
+   PURPOSE: Footer styles + all responsive media queries.
+   The footer is the last thing a visitor sees — Leclerc's
+   is dark, multi-column, and clean.
+
+   Media queries are kept in this file because they override
+   styles from ALL other files. Keeping them together makes
+   it easy to see all responsive changes in one place.
+   ============================================================ */
+
+
+/* ── FOOTER WRAPPER ──────────────────────────────────────── */
+footer {
+  background: var(--footer-bg); /* #0D0D14 — dark blue-tinted black */
+  color: var(--white);
+  padding: 80px 80px 40px;
+}
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Large wordmark at the top of footer */
+.footer-logo {
+  font-family: var(--condensed);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin-bottom: 60px;
+}
+.footer-logo span { color: var(--red); }
+
+/* ── LINK COLUMNS ────────────────────────────────────────── */
+/*
+  Three-column grid of links, centred on the page.
+  Two types of links:
+  - .footer-link        → large serif (primary nav links)
+  - .footer-link.small  → small condensed (legal links)
+*/
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 48px;
+  margin-bottom: 60px;
+  max-width: 700px;
+  margin-inline: auto; /* centres the grid block */
+}
+.footer-link {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--white);
+  text-decoration: none;
+  transition: color 0.2s;
+  cursor: pointer;
+}
+.footer-link:hover { color: rgba(255,255,255,0.5); }
+.footer-link.small {
+  font-family: var(--condensed);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ── SOCIAL ICONS ROW ────────────────────────────────────── */
+.footer-social {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 48px;
+}
+.social-icon {
+  width: 40px; height: 40px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--condensed);
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.05em;
+  transition: border-color 0.2s, color 0.2s;
+}
+.social-icon:hover {
+  border-color: rgba(255,255,255,0.6);
+  color: var(--white);
+}
+
+/* ── COPYRIGHT LINE ──────────────────────────────────────── */
+.footer-copy {
+  text-align: center;
+  font-family: var(--condensed);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-copy a {
+  color: rgba(255,255,255,0.4);
+  text-decoration: underline;
+}
+
+/* ── LANGUAGE SWITCHER (EN / IT / FR) ────────────────────── */
+.footer-lang {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  justify-content: flex-start;
+}
+.lang-btn {
+  font-family: var(--condensed);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 0.2s;
+}
+.lang-btn.active  { color: var(--white); }
+.lang-btn:hover   { color: rgba(255,255,255,0.7); }
+
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — MEDIA QUERIES
+   These override the desktop styles for smaller screens.
+
+   HOW MEDIA QUERIES WORK:
+   @media (max-width: 900px) { ... }
+   → Rules inside only apply when screen width ≤ 900px.
+   Always write mobile overrides AFTER desktop styles.
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+
+  /* Nav */
+  nav { padding: 16px 20px; }
+
+  /* Hero */
+  .hero-title { font-size: clamp(64px, 16vw, 140px); }
+
+  /* Bio — switch from 2-col to 1-col */
+  .bio-section {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 60px 32px;
+  }
+
+  /* Chapter — stack vertically */
+  .chapter-section { grid-template-columns: 1fr; }
+  .chapter-right-img { min-height: 50vh; }
+
+  /* Photo grid — stack vertically, remove offsets */
+  .photo-grid    { flex-direction: column; }
+  .photo-card-1,
+  .photo-card-2  { width: 100%; margin: 0; }
+
+  /* Dark chapter */
+  .dark-chapter-title { font-size: clamp(72px, 14vw, 140px); }
+
+  /* Analyze section */
+  .analyze-section { padding: 80px 32px; }
+  .analyze-grid    { grid-template-columns: 1fr; }
+
+  /* Footer */
+  footer { padding: 60px 32px 32px; }
+  .footer-links { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .hero-title { font-size: clamp(52px, 14vw, 100px); }
+  .chapter-left { padding: 60px 28px; }
+  .footer-links { grid-template-columns: 1fr; }
+  .footer-social { gap: 16px; }
+  .analyze-section { padding: 60px 20px; }
+}

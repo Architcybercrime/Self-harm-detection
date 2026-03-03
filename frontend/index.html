@@ -1,43 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mindful Assessment | Mental Health Self-Detection</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafeSignal — Beyond Detection</title>
+
+  <!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  FILE STRUCTURE                                      ║
+  ║                                                      ║
+  ║  safesignal/                                         ║
+  ║  ├── index.html          ← YOU ARE HERE              ║
+  ║  ├── css/                                            ║
+  ║  │   ├── base.css        ← variables, reset, body    ║
+  ║  │   ├── components.css  ← cursor, nav, hero, CTA    ║
+  ║  │   ├── sections.css    ← bio, redblocks, chapters  ║
+  ║  │   ├── analyze.css     ← the analysis tool         ║
+  ║  │   └── footer.css      ← footer + media queries    ║
+  ║  └── js/                                             ║
+  ║      └── main.js         ← all animations + logic    ║
+  ╚══════════════════════════════════════════════════════╝
+
+  WHY SEPARATE CSS FILES?
+  When everything is in one file it becomes hard to find
+  things. Split by responsibility:
+  - base.css      → "what are the colours and defaults?"
+  - components.css → "how does the nav/cursor/hero look?"
+  - sections.css  → "how does each content block look?"
+  - analyze.css   → "how does the tool section look?"
+  - footer.css    → "how does the footer look? + mobile?"
+
+  CSS LOAD ORDER MATTERS:
+  base.css must come FIRST because all other files use
+  the CSS variables defined there (--red, --condensed, etc.)
+  If base.css loads after, the variables won't exist yet.
+  -->
+
+  <!-- 1. EXTERNAL: Google Fonts loaded by base.css @import -->
+  <!-- 2. EXTERNAL: GSAP animation library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- 3. OUR CSS — order matters, base.css always first -->
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="sections.css">
+  <link rel="stylesheet" href="analyze.css">
+  <link rel="stylesheet" href="footer.css">
 </head>
 <body>
-  <!-- Hero Section (Charles Leclerc style layout) -->
-  <section class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-content">
-      <h1 class="fade-in">Mindful Assessment</h1>
-      <p class="fade-in-delay">In our hyper-connected world, social media connects us all—but it's quietly eroding mental health. Track your emotional state, identify thinking patterns, and receive timely alerts to stay balanced.</p>
-      <button onclick="scrollToQuiz()" class="cta-btn">Begin Assessment</button>
-    </div>
-  </section>
 
-  <!-- Quiz Section -->
-  <section id="quiz" class="section">
-    <div class="container">
-      <h2 class="fade-in">Assess Your Mental State</h2>
-      <div class="progress-bar">
-        <div id="progress"></div>
+  <!-- ════════════════════════════════════════════════════
+       UTILITY ELEMENTS (always on screen)
+       ════════════════════════════════════════════════════ -->
+
+  <!-- Thin red scroll progress bar at top of page -->
+  <div id="progress"></div>
+
+  <!-- Custom cursor dot (follows mouse via JS) -->
+  <div id="cursor"></div>
+
+
+  <!-- ════════════════════════════════════════════════════
+       NAVIGATION
+       Fixed top bar — logo box (left) + chapters (right)
+       Stays visible on all sections via position:fixed
+       ════════════════════════════════════════════════════ -->
+  <nav>
+    <div class="nav-logo">
+      <div class="brand-abbr">SS</div>
+      <div class="brand-num">A<span>I</span></div>
+    </div>
+    <div class="nav-right">
+      <div class="nav-chapters">
+        CHAPTERS
+        <svg viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z"/></svg>
       </div>
-      <form id="quizForm"></form>
-      <button id="submitQuiz" class="cta-btn" style="display:none;">Get Results</button>
+      <div class="nav-menu">
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Fixed bottom-right CTA button (like Leclerc's "+ KNOW THE MAN") -->
+  <button class="hero-cta"
+    onclick="document.getElementById('analyze').scrollIntoView({behavior:'smooth'})">
+    <span class="plus">+</span> ANALYSE TEXT
+  </button>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 1 — HERO
+       Frame 1: Full viewport, dark image, massive white text
+       Frame 2: Gradient fade as you scroll (GSAP scrub)
+       ════════════════════════════════════════════════════ -->
+  <section id="hero">
+    <div class="hero-bg">
+      <!--
+        This overlay div starts at opacity:0.
+        GSAP in main.js scrubs it to opacity:1 as you scroll.
+        Result: image fades to pastel gradient (frame 1 → 2).
+        To use a real photo: add background-image to .hero-bg in CSS.
+      -->
+      <div class="hero-gradient-overlay" id="heroOverlay"></div>
+    </div>
+
+    <!-- Massive title — bleeds off right edge on purpose -->
+    <h1 class="hero-title" id="heroTitle">
+      BEYOND<br>DETECTION
+    </h1>
+
+    <!-- Animated scroll indicator (vertical line that grows) -->
+    <div class="hero-scroll">
+      <span class="hero-scroll-label">SCROLL TO EXPLORE</span>
+      <div class="hero-scroll-line"></div>
     </div>
   </section>
 
-  <!-- Results Section -->
-  <section id="results" class="section" style="display:none;">
-    <div class="container">
-      <h2 class="fade-in">Your Assessment Results</h2>
-      <div id="resultContent" class="result-cards"></div>
-      <button onclick="restartQuiz()" class="cta-btn">New Assessment</button>
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 2 — BIO
+       Frame 3: White background, portrait image left, text right
+       ════════════════════════════════════════════════════ -->
+  <section class="section-white">
+    <div class="bio-section">
+
+      <!--
+        reveal-left class: starts translated left, fades in.
+        The .in class is added by IntersectionObserver in main.js
+        when this element enters the viewport.
+        Replace .bio-image div with: <img src="your-photo.jpg">
+      -->
+      <div class="bio-image-wrap reveal-left">
+        <div class="bio-image"></div>
+      </div>
+
+      <div class="bio-text reveal">
+        <p>
+          Every year, millions of people express distress through text —
+          in messages, journals, and social posts. Most go unnoticed.
+          SafeSignal was built to change that.
+        </p>
+        <p>
+          Using natural language processing trained on clinical datasets,
+          the system identifies linguistic patterns associated with self-harm
+          ideation — not just keywords, but context, sentiment, and semantic
+          clusters — with the accuracy that matters when lives are at stake.
+        </p>
+
+        <!-- Tab switcher at the bottom (like "GENERAL INFOS | STATS") -->
+        <div class="bio-tabs">
+          <div class="bio-tab active">
+            <div class="dot"></div>
+            HOW IT WORKS
+          </div>
+          <div class="bio-tab">
+            <div class="dot" style="background:var(--muted)"></div>
+            STATS
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <script src="script.js"></script>
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 3 — RED BLOCKS
+       Frame 4: Dark track background + dramatic red rectangles
+       The red rects animate in via GSAP clip-path wipe (main.js)
+       ════════════════════════════════════════════════════ -->
+  <section class="redblock-section">
+    <div class="redblock-bg"></div>
+    <div class="redblock-track">
+      <div class="redblock-car"></div>
+    </div>
+    <!-- id="redRect1/2" referenced by GSAP in main.js -->
+    <div class="red-rect red-rect-1" id="redRect1"></div>
+    <div class="red-rect red-rect-2" id="redRect2"></div>
+    <div class="redblock-number">AI</div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 4 — CHAPTER: DETECTION
+       Frame 5: Bullet label + quote (left), large image (right)
+       ════════════════════════════════════════════════════ -->
+  <section class="chapter-section section-white">
+
+    <div class="chapter-left reveal-left">
+      <!-- "• DETECTION" label -->
+      <div class="chapter-label">
+        <div class="dot"></div>
+        <div class="chapter-label-text">DETECTION</div>
+      </div>
+
+      <!-- Large italic quote -->
+      <div class="chapter-quote">
+        "The words we choose reveal more about our state of mind than we realise."
+      </div>
+
+      <!-- Small inline image — replace with <img src="..."> -->
+      <div class="chapter-small-img"></div>
+    </div>
+
+    <div class="chapter-right">
+      <!-- Full-height image — replace with <img src="..."> -->
+      <div class="chapter-right-img"></div>
+      <div class="chapter-body reveal">
+        A system that learns the subtle grammar of distress:
+        the shift from "I feel tired" to "I feel nothing".
+        Pattern recognition that goes deeper than any keyword list.
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 5 — PHOTO GRID
+       Frame 6: Two staggered photos at different heights
+       GSAP parallax moves them at different speeds (main.js)
+       ════════════════════════════════════════════════════ -->
+  <section class="section-white photo-grid-section">
+    <div class="photo-grid">
+
+      <!-- photo-card-1: larger, pushed down 80px in CSS -->
+      <div class="photo-card photo-card-1 reveal">
+        <div class="photo-img photo-img-1">
+          <!-- Replace with: <img src="photo1.jpg"> -->
+        </div>
+      </div>
+
+      <!-- photo-card-2: smaller, pulled up 40px in CSS -->
+      <div class="photo-card photo-card-2 reveal" style="transition-delay: 0.15s">
+        <div class="photo-img photo-img-2">
+          <!-- Replace with: <img src="photo2.jpg"> -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 6 — DARK CHAPTER
+       Frame 7: Black bg, massive text bleeds off left, red shapes
+       id="darkTitle" animated by GSAP in main.js
+       ════════════════════════════════════════════════════ -->
+  <section class="dark-chapter">
+    <div class="dark-chapter-bg-img"></div>
+    <div class="dark-red-shape-1"></div>
+    <div class="dark-red-shape-2"></div>
+    <div class="dark-red-line"></div>
+    <!--
+      margin-left: -24px in CSS makes this bleed off the left edge.
+      This is intentional — same technique as Leclerc's site.
+    -->
+    <h2 class="dark-chapter-title" id="darkTitle">PRECISION</h2>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 7 — RACE NIGHT
+       Frames 8,9: Very dark, motion blur streaks, floating cards
+       ════════════════════════════════════════════════════ -->
+  <section class="racenight-section">
+    <div class="racenight-bg"></div>
+    <div class="racenight-lights"></div>
+
+    <!--
+      MOTION BLUR STREAKS:
+      Each is a .streak div with inline styles for position/size/opacity.
+      CSS gives them blur(3px) + rotate(-12deg) → looks like stadium lights.
+      All different sizes and positions = natural, random feel.
+    -->
+    <div class="streak" style="width:220px; height:4px; top:18%; left:25%; opacity:.35"></div>
+    <div class="streak" style="width:160px; height:3px; top:14%; left:60%; opacity:.30"></div>
+    <div class="streak" style="width:280px; height:5px; top:28%; left:5%;  opacity:.25"></div>
+    <div class="streak" style="width:120px; height:3px; top:32%; left:75%; opacity:.40"></div>
+    <div class="streak" style="width:200px; height:4px; top:22%; left:42%; opacity:.20"></div>
+    <div class="streak" style="width:90px;  height:3px; top:40%; left:15%; opacity:.35"></div>
+    <div class="streak" style="width:140px; height:3px; top:38%; left:82%; opacity:.30"></div>
+    <div class="streak" style="width:320px; height:6px; top:50%; left:0%;  opacity:.20"></div>
+    <div class="streak" style="width:180px; height:4px; top:52%; left:70%; opacity:.30"></div>
+    <div class="streak" style="width:110px; height:3px; top:62%; left:35%; opacity:.25"></div>
+    <div class="streak" style="width:80px;  height:2px; top:18%; left:88%; opacity:.30"></div>
+    <div class="streak" style="width:260px; height:5px; top:8%;  left:10%; opacity:.20"></div>
+    <div class="streak" style="width:150px; height:3px; top:58%; left:55%; opacity:.35"></div>
+    <div class="streak" style="width:70px;  height:2px; top:45%; left:90%; opacity:.40"></div>
+
+    <!-- Floating photo cards — fc-1 and fc-2 positioned in CSS -->
+    <div class="float-card fc-1">
+      <div class="float-card-img"
+        style="background: linear-gradient(160deg, #3A4A6A, #1A2A4A)">
+        <!-- Replace with: <img src="race-photo-1.jpg"> -->
+      </div>
+    </div>
+    <div class="float-card fc-2">
+      <div class="float-card-img"
+        style="background: linear-gradient(160deg, #6A2A2A, #3A1A1A)">
+        <!-- Replace with: <img src="race-photo-2.jpg"> -->
+      </div>
+    </div>
+
+    <!-- Simplified F1 car shape at bottom -->
+    <div class="racenight-car">
+      <div class="car-body"></div>
+    </div>
+
+    <div class="racenight-caption">Dataset — Clinical NLP Research</div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       SECTION 8 — LIVE ANALYSIS TOOL
+       The functional SafeSignal interface, styled to match
+       the editorial chapter aesthetic of the rest of the site
+       ════════════════════════════════════════════════════ -->
+  <section class="analyze-section section-light" id="analyze">
+    <div class="analyze-inner">
+
+      <!-- Chapter label (same pattern as DETECTION, BEGINNINGS etc.) -->
+      <div class="analyze-chapter-label">
+        <div class="dot"></div>
+        <div class="analyze-chapter-label-text">LIVE ANALYSIS</div>
+      </div>
+
+      <!-- Big section title -->
+      <h2 class="analyze-title reveal">
+        DETECT<br>SIGNALS
+      </h2>
+
+      <div class="analyze-grid">
+
+        <!-- LEFT: description + input form -->
+        <div>
+          <p class="analyze-desc reveal">
+            Paste any text below. The detection engine analyses
+            linguistic markers, sentiment trajectory, and semantic
+            context — returning a risk score and identified signals.
+          </p>
+
+          <label class="input-label" for="textInput">// INPUT TEXT</label>
+          <textarea
+            id="textInput"
+            placeholder="Type or paste text here... (Ctrl+Enter to run)">
+          </textarea>
+
+          <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+            <span class="plus">+</span> RUN ANALYSIS
+          </button>
+        </div>
+
+        <!-- RIGHT: result panel (hidden until analysis runs) -->
+        <div>
+          <div id="result">
+            <div class="result-level" id="resultLevel">—</div>
+            <div class="result-bar-wrap">
+              <div class="result-bar" id="resultBar"></div>
+            </div>
+            <div class="result-tags" id="resultTags"></div>
+            <p class="result-note" id="resultNote"></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════
+       FOOTER
+       Frame 10: Dark, multi-column links, social icons, copyright
+       ════════════════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-inner">
+
+      <!-- Wordmark -->
+      <div class="footer-logo">SAFE<span>SIGNAL</span></div>
+
+      <!-- Three-column link grid -->
+      <div class="footer-links">
+        <a class="footer-link">The System</a>
+        <a class="footer-link">Partners</a>
+        <a class="footer-link small">Privacy Policy</a>
+
+        <a class="footer-link">The Research</a>
+        <a class="footer-link">News</a>
+        <a class="footer-link small">Cookie Policy</a>
+
+        <a class="footer-link">Dataset</a>
+        <a class="footer-link">Contacts</a>
+        <a class="footer-link small">Legal Notice</a>
+
+        <a class="footer-link">Team</a>
+      </div>
+
+      <!-- Social icons row -->
+      <div class="footer-social">
+        <div class="social-icon">GH</div>
+        <div class="social-icon">TW</div>
+        <div class="social-icon">LI</div>
+        <div class="social-icon">YT</div>
+      </div>
+
+      <!-- Copyright -->
+      <div class="footer-copy">
+        ©2025 SAFESIGNAL — COLLEGE PROJECT — BUILT WITH GSAP + VANILLA JS
+      </div>
+
+      <!-- Language switcher -->
+      <div class="footer-lang">
+        <button class="lang-btn active">EN</button>
+        <button class="lang-btn">HI</button>
+        <button class="lang-btn">FR</button>
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!--
+    JS loaded at the END of body (after all HTML).
+    WHY? So the DOM is fully built before JS tries to
+    find elements like document.getElementById('cursor').
+    If JS runs before HTML loads, it finds nothing.
+  -->
+  <script src="main.js"></script>
+
 </body>
-</html>
+</html> 
