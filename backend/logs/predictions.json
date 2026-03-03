@@ -1,0 +1,51 @@
+[
+  {
+    "timestamp": "2026-03-03T19:02:22.565149",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:24.016920",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:26.059719",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:26.985402",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:27.817192",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:28.782369",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-03-03T19:02:29.505094",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.7066,
+    "sentiment": -0.5574
+  }
+]
