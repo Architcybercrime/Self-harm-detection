@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.preprocess import full_preprocess, get_sentiment_scores
 from utils.monitor import log_prediction, get_monitoring_report
 from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
+from utils.speech_analysis import analyze_audio_file, record_from_microphone
 
 app  = Flask(__name__)
 CORS(app)
@@ -121,6 +122,25 @@ def analyze_face():
     return jsonify({"error": "Provide image_base64 or use_webcam:true"}), 400
 
 
+@app.route('/api/analyze-speech', methods=['POST'])
+def analyze_speech():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    if 'audio_path' in data:
+        result = analyze_audio_file(data['audio_path'])
+        return jsonify(result), 200
+
+    if data.get('use_microphone'):
+        duration = int(data.get('duration', 5))
+        result   = record_from_microphone(duration)
+        return jsonify(result), 200
+
+    return jsonify({"error": "Provide audio_path or use_microphone:true"}), 400
+
+
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
@@ -131,5 +151,6 @@ if __name__ == '__main__':
     print("    GET  /api/stats")
     print("    GET  /api/monitor")
     print("    POST /api/analyze-face")
+    print("    POST /api/analyze-speech")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
