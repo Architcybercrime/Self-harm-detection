@@ -8,6 +8,7 @@ from utils.preprocess import full_preprocess, get_sentiment_scores
 from utils.monitor import log_prediction, get_monitoring_report
 from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
 from utils.speech_analysis import analyze_audio_file, record_from_microphone
+from utils.fusion import fuse_risk_scores
 
 app  = Flask(__name__)
 CORS(app)
@@ -141,6 +142,61 @@ def analyze_speech():
     return jsonify({"error": "Provide audio_path or use_microphone:true"}), 400
 
 
+@app.route('/api/predict-multimodal', methods=['POST'])
+def predict_multimodal():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    text_result   = None
+    face_result   = None
+    speech_result = None
+
+    # Text analysis
+    if 'text' in data:
+        text = str(data['text']).strip()
+        cleaned   = full_preprocess(text)
+        scores    = get_sentiment_scores(text)
+        sentiment = scores['compound']
+        neg_score = scores['neg']
+        tfidf_vec = tfidf.transform([cleaned]).toarray()
+        X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+        prediction  = model.predict(X)[0]
+        probability = model.predict_proba(X)[0]
+        text_result = {
+            "risk_level": 'HIGH' if prediction == 'suicide' else 'LOW',
+            "confidence": round(float(max(probability)), 4)
+        }
+
+    # Facial analysis
+    if data.get('use_webcam'):
+        face_result = capture_webcam_frame()
+
+    # Speech analysis
+    if data.get('use_microphone'):
+        duration      = int(data.get('duration', 5))
+        speech_result = record_from_microphone(duration)
+
+    # Fuse all scores
+    final_result = fuse_risk_scores(
+        text_result=text_result,
+        face_result=face_result,
+        speech_result=speech_result
+    )
+
+    # Log the prediction
+    if 'risk_level' in final_result:
+        prediction_log.append({
+            "timestamp":  datetime.datetime.now().isoformat(),
+            "risk_level": final_result['risk_level'],
+            "confidence": final_result['final_risk_score'],
+            "multimodal": True
+        })
+
+    return jsonify(final_result), 200
+
+
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
@@ -152,5 +208,6 @@ if __name__ == '__main__':
     print("    GET  /api/monitor")
     print("    POST /api/analyze-face")
     print("    POST /api/analyze-speech")
+    print("    POST /api/predict-multimodal")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
