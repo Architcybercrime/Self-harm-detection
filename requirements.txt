@@ -1,0 +1,16 @@
+Flask
+flask-cors
+numpy
+pandas
+scikit-learn
+nltk
+joblib
+matplotlib
+seaborn
+
+# Optional extras for multimodal
+opencv-python
+deepface
+librosa
+SpeechRecognition
+pyaudio
