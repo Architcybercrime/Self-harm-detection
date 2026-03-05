@@ -112,7 +112,13 @@ nav {
   gap: 8px;
   color: var(--white);
 }
-.nav-chapters svg { width: 12px; height: 12px; fill: currentColor; }
+.nav-chapters svg {
+  width: 12px;
+  height: 12px;
+  min-width: 12px; /* prevent SVG from growing */
+  fill: currentColor;
+  display: inline-block;
+}
 
 /* Hamburger menu icon (two lines) */
 .nav-menu {
@@ -191,8 +197,11 @@ nav {
   text-transform: uppercase;
   letter-spacing: -0.01em;
   color: var(--white);
-  padding: 0 0 16px 24px; /* only left padding, text can bleed right */
+  padding: 0 0 16px 24px;
   text-shadow: 0 2px 40px rgba(0,0,0,0.3);
+  /* Explicit defaults so clearProps restores these correctly */
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /*

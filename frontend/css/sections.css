@@ -35,10 +35,10 @@
   when you add a real image.
 */
 .bio-image {
-  width: 100%;
-  aspect-ratio: 3/4;
-  object-fit: cover;
-  background: linear-gradient(160deg, #8B3A3A 0%, #5C2A2A 40%, #3A1A1A 100%);
+width: 100%;
+aspect-ratio: 3/4;
+overflow: hidden;
+background: url("../images/intro-self-harm.png") center/contain no-repeat;
 }
 .bio-text {
   padding-top: 40px;
@@ -445,4 +445,112 @@
   letter-spacing: 0.15em;
   color: rgba(255,255,255,0.7);
   white-space: nowrap;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HORIZONTAL SLIDE — Section 2 → Section 3
+   ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   HORIZONTAL SCROLL — Section 2 → Section 3
+   Works exactly like vertical scroll but sideways.
+   GSAP pins the outer div, then slides the inner track
+   horizontally as you scroll down. When track reaches
+   the end, GSAP unpins and normal scroll resumes.
+   ══════════════════════════════════════════════════════════ */
+
+/* Outer container — GSAP pins this to the viewport */
+.hscroll-outer {
+  position: relative;
+  overflow: hidden;   /* hide the off-screen panel */
+  width: 100%;
+}
+
+/* Inner track — 200vw wide, holds both panels side by side.
+   GSAP moves this LEFT by 100vw to reveal panel 2. */
+.hscroll-track {
+  display: flex;
+  width: 200vw;       /* exactly 2 full-screen widths */
+  will-change: transform;
+}
+
+/* Each panel = exactly one viewport wide and auto-height */
+.hscroll-panel {
+  width: 100vw;
+  flex-shrink: 0;
+}
+
+/* Sections inside panels fill the panel width */
+.hscroll-section {
+  width: 100%;
+}
+
+/* ── SCROLL HINT ─────────────────────────────────────────
+   Small animated indicator at the bottom of panel 1
+   telling the user to keep scrolling                     */
+.hscroll-hint {
+  position: absolute;
+  bottom: 32px;
+  right: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  animation: hintBounce 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.hscroll-hint svg { opacity: 0.5; }
+
+@keyframes hintBounce {
+  0%, 100% { transform: translateY(0);   opacity: 0.7; }
+  50%       { transform: translateY(6px); opacity: 1;   }
+}
+
+/* ── PROGRESS DOTS ───────────────────────────────────────
+   Two dots at the bottom centre showing which panel
+   is currently visible                                   */
+.hscroll-dots {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+.hscroll-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.2);
+  transition: background 0.3s, transform 0.3s;
+}
+.hscroll-dot.active {
+  background: var(--red);
+  transform: scale(1.35);
+}
+
+/* On dark panel 2, dots should be white */
+.hscroll-dots.on-dark .hscroll-dot {
+  background: rgba(255,255,255,0.25);
+}
+.hscroll-dots.on-dark .hscroll-dot.active {
+  background: var(--white);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────
+   On very small screens keep normal vertical layout      */
+@media (max-width: 600px) {
+  .hscroll-track  { width: 100%; flex-direction: column; }
+  .hscroll-panel  { width: 100%; }
+  .hscroll-outer  { overflow: visible; }
+  .hscroll-hint   { display: none; }
 }

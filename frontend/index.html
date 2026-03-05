@@ -36,17 +36,16 @@
   If base.css loads after, the variables won't exist yet.
   -->
 
-  <!-- 1. EXTERNAL: Google Fonts loaded by base.css @import -->
-  <!-- 2. EXTERNAL: GSAP animation library -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,700;0,900;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-
-  <!-- 3. OUR CSS — order matters, base.css always first -->
-  <link rel="stylesheet" href="base.css">
-  <link rel="stylesheet" href="components.css">
-  <link rel="stylesheet" href="sections.css">
-  <link rel="stylesheet" href="analyze.css">
-  <link rel="stylesheet" href="footer.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <link rel="stylesheet" href="css/analyze.css">
+  <link rel="stylesheet" href="css/footer.css">
 </head>
 <body>
 
@@ -74,7 +73,7 @@
     <div class="nav-right">
       <div class="nav-chapters">
         CHAPTERS
-        <svg viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z"/></svg>
+        <svg viewBox="0 0 10 6" width="12" height="12" style="display:inline-block;vertical-align:middle;"><path d="M0 0l5 6 5-6z"/></svg>
       </div>
       <div class="nav-menu">
         <span></span>
@@ -120,67 +119,73 @@
 
 
   <!-- ════════════════════════════════════════════════════
-       SECTION 2 — BIO
-       Frame 3: White background, portrait image left, text right
+       HORIZONTAL SCROLL — Section 2 + Section 3
+       The viewport pins here while the two panels slide
+       horizontally (like a book page turning sideways).
+       Scroll down = moves right through panels.
+       Once Section 3 is fully visible, scroll continues
+       normally downward into Section 4 and beyond.
        ════════════════════════════════════════════════════ -->
-  <section class="section-white">
-    <div class="bio-section">
+  <div class="hscroll-outer" id="hscrollOuter">
+    <!-- This inner strip is 200vw wide (2 panels side by side) -->
+    <div class="hscroll-track" id="hscrollTrack">
 
-      <!--
-        reveal-left class: starts translated left, fades in.
-        The .in class is added by IntersectionObserver in main.js
-        when this element enters the viewport.
-        Replace .bio-image div with: <img src="your-photo.jpg">
-      -->
-      <div class="bio-image-wrap reveal-left">
-        <div class="bio-image"></div>
+      <!-- PANEL 1 — BIO (Section 2) -->
+      <div class="hscroll-panel">
+        <section class="section-white hscroll-section">
+          <div class="bio-section">
+            <div class="bio-image-wrap">
+              <div class="bio-image"></div>
+            </div>
+            <div class="bio-text">
+              <p>
+                Every year, millions of people express distress through text —
+                in messages, journals, and social posts. Most go unnoticed.
+                SafeSignal was built to change that.
+              </p>
+              <p>
+                Using natural language processing trained on clinical datasets,
+                the system identifies linguistic patterns associated with self-harm
+                ideation — not just keywords, but context, sentiment, and semantic
+                clusters — with the accuracy that matters when lives are at stake.
+              </p>
+              <div class="bio-tabs">
+                <div class="bio-tab active"><div class="dot"></div>HOW IT WORKS</div>
+                <div class="bio-tab"><div class="dot" style="background:var(--muted)"></div>STATS</div>
+              </div>
+            </div>
+          </div>
+          <!-- Subtle scroll indicator -->
+          <div class="hscroll-hint">
+            <span>SCROLL TO REVEAL</span>
+            <svg viewBox="0 0 20 40" width="20" height="40">
+              <path d="M10 0 L10 32 M2 24 L10 32 L18 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </section>
       </div>
 
-      <div class="bio-text reveal">
-        <p>
-          Every year, millions of people express distress through text —
-          in messages, journals, and social posts. Most go unnoticed.
-          SafeSignal was built to change that.
-        </p>
-        <p>
-          Using natural language processing trained on clinical datasets,
-          the system identifies linguistic patterns associated with self-harm
-          ideation — not just keywords, but context, sentiment, and semantic
-          clusters — with the accuracy that matters when lives are at stake.
-        </p>
-
-        <!-- Tab switcher at the bottom (like "GENERAL INFOS | STATS") -->
-        <div class="bio-tabs">
-          <div class="bio-tab active">
-            <div class="dot"></div>
-            HOW IT WORKS
+      <!-- PANEL 2 — RED BLOCKS (Section 3) -->
+      <div class="hscroll-panel">
+        <section class="redblock-section hscroll-section">
+          <div class="redblock-bg"></div>
+          <div class="redblock-track">
+            <div class="redblock-car"></div>
           </div>
-          <div class="bio-tab">
-            <div class="dot" style="background:var(--muted)"></div>
-            STATS
-          </div>
-        </div>
+          <div class="red-rect red-rect-1" id="redRect1"></div>
+          <div class="red-rect red-rect-2" id="redRect2"></div>
+          <div class="redblock-number">AI</div>
+        </section>
       </div>
 
     </div>
-  </section>
 
-
-  <!-- ════════════════════════════════════════════════════
-       SECTION 3 — RED BLOCKS
-       Frame 4: Dark track background + dramatic red rectangles
-       The red rects animate in via GSAP clip-path wipe (main.js)
-       ════════════════════════════════════════════════════ -->
-  <section class="redblock-section">
-    <div class="redblock-bg"></div>
-    <div class="redblock-track">
-      <div class="redblock-car"></div>
+    <!-- Progress dots — show which panel is visible -->
+    <div class="hscroll-dots">
+      <div class="hscroll-dot active" id="hDot1"></div>
+      <div class="hscroll-dot" id="hDot2"></div>
     </div>
-    <!-- id="redRect1/2" referenced by GSAP in main.js -->
-    <div class="red-rect red-rect-1" id="redRect1"></div>
-    <div class="red-rect red-rect-2" id="redRect2"></div>
-    <div class="redblock-number">AI</div>
-  </section>
+  </div>
 
 
   <!-- ════════════════════════════════════════════════════
@@ -431,4 +436,4 @@
   <script src="main.js"></script>
 
 </body>
-</html> 
+</html>

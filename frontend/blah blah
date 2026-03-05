@@ -1,0 +1,18 @@
+            We live in a hyper-connected digital world, yet loneliness
+            and emotional distress are rising. Social media pressure,
+            constant comparison, and online isolation can silently affect
+            mental health, often going unnoticed.
+
+            This project focuses on identifying early signs of self-harm 
+            tendencies through emotional and behavioral analysis. By using
+            technology to detect patterns of distress, the platform aims to
+            promote awareness and encourage support for those who may be 
+            silently struggling
+
+            .bio-image {
+                width: 100%;
+                aspect-ratio: 3/4;
+                overflow: hidden;
+                background: url("../images/intro-self-harm.png") center/contain no-repeat;
+             }
+

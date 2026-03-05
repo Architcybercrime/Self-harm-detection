@@ -86,7 +86,7 @@ ScrollTrigger.create({
        No easing, no delay — perfectly tied to finger/scroll.
    ══════════════════════════════════════════════════════════ */
 
-// 4a: Entrance animation
+// 4a: Entrance animation — plays once on page load
 gsap.from('#heroTitle', {
   y: 80,
   opacity: 0,
@@ -95,26 +95,35 @@ gsap.from('#heroTitle', {
   delay: 0.3
 });
 
-// 4b: Scroll fade — gradient overlay fades in
+// 4b: Scroll fade — gradient overlay fades in as you scroll down,
+//     fades back out when you scroll back up (scrub handles both directions)
 gsap.to('#heroOverlay', {
   opacity: 1,
   scrollTrigger: {
     trigger: '#hero',
-    start: 'top top',       // when hero top hits viewport top
-    end: 'bottom top',      // when hero bottom hits viewport top
-    scrub: true             // tied directly to scroll position
+    start: 'top top',
+    end: 'bottom top',
+    scrub: true
   }
 });
 
-// 4b: Scroll fade — title fades out as you scroll away
+// 4b: Title fades out going down, comes BACK when scrolling up.
+//     scrub:true means the animation perfectly reverses on scroll up.
+//     toggleActions not used — scrub alone handles both directions.
+//     clearProps:'all' on the entrance tween ensures scrub can
+//     override the inline styles left by the entrance animation.
 gsap.to('#heroTitle', {
   opacity: 0,
   y: -60,
   scrollTrigger: {
     trigger: '#hero',
-    start: '20% top',       // starts when you've scrolled 20% through
+    start: '20% top',
     end: 'bottom top',
-    scrub: true
+    scrub: true,
+    // When scrolled fully back to top, restore the title to full opacity
+    onLeaveBack: () => {
+      gsap.set('#heroTitle', { clearProps: 'opacity,y' });
+    }
   }
 });
 
@@ -132,28 +141,8 @@ gsap.to('#heroTitle', {
    toggleActions: 'play none none none'
    = play forward when enters viewport, do nothing on reverse
    ══════════════════════════════════════════════════════════ */
-gsap.from('#redRect1', {
-  clipPath: 'inset(0 100% 0 0)',
-  duration: 1.2,
-  ease: 'power3.out',
-  scrollTrigger: {
-    trigger: '.redblock-section',
-    start: 'top 70%',
-    toggleActions: 'play none none none'
-  }
-});
-
-gsap.from('#redRect2', {
-  clipPath: 'inset(0 100% 0 0)',
-  duration: 1.4,
-  ease: 'power3.out',
-  delay: 0.15,              // slightly after rect1
-  scrollTrigger: {
-    trigger: '.redblock-section',
-    start: 'top 70%',
-    toggleActions: 'play none none none'
-  }
-});
+/* Red block animations are now fired by the horizontal
+   scroll trigger in section 12 when panel 2 becomes visible */
 
 
 /* ══════════════════════════════════════════════════════════
@@ -386,3 +375,71 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
     this.classList.add('active');
   });
 });
+
+
+/* ══════════════════════════════════════════════════════════
+   12. HORIZONTAL SCROLL — Section 2 → Section 3
+
+   HOW IT WORKS:
+   GSAP ScrollTrigger PINS the outer wrapper to the viewport
+   while you scroll. While it is pinned, instead of the page
+   moving DOWN, the inner track moves LEFT — revealing Panel 2.
+   Once Panel 2 is fully visible, GSAP unpins the wrapper and
+   normal vertical scroll resumes into Section 4 and below.
+
+   It feels exactly like vertical scrolling — just sideways.
+   ══════════════════════════════════════════════════════════ */
+
+(function () {
+  const outer  = document.getElementById('hscrollOuter');
+  const track  = document.getElementById('hscrollTrack');
+  const dot1   = document.getElementById('hDot1');
+  const dot2   = document.getElementById('hDot2');
+  const dots   = document.querySelector('.hscroll-dots');
+
+  if (!outer || !track) return;
+
+  // On mobile (≤600px) we skip the horizontal scroll entirely
+  if (window.innerWidth <= 600) return;
+
+  // The track must move left by exactly one panel width (100vw)
+  // scrub:true ties the movement directly to scroll progress
+  gsap.to(track, {
+    x: '-100vw',          // slide left by one full viewport width
+    ease: 'none',         // perfectly linear — matches scroll 1:1
+    scrollTrigger: {
+      trigger: outer,
+      start:  'top top',  // pin starts when outer hits viewport top
+      end:    '+=100%',   // scroll distance = 100% of outer height
+      pin:    true,       // freeze outer in place during scroll
+      scrub:  1,          // 1s smoothing lag (feels natural)
+      anticipatePin: 1,   // prevent jump when pin engages
+
+      // Update the progress dots as scroll progresses
+      onUpdate: self => {
+        if (self.progress < 0.5) {
+          dot1.classList.add('active');
+          dot2.classList.remove('active');
+          dots.classList.remove('on-dark');
+        } else {
+          dot2.classList.add('active');
+          dot1.classList.remove('active');
+          dots.classList.add('on-dark');
+          // Trigger red block animations when panel 2 is visible
+          if (!track._redBlocksFired) {
+            track._redBlocksFired = true;
+            gsap.fromTo('#redRect1',
+              { clipPath: 'inset(0 100% 0 0)' },
+              { clipPath: 'inset(0 0% 0 0)', duration: 1.2, ease: 'power3.out' }
+            );
+            gsap.fromTo('#redRect2',
+              { clipPath: 'inset(0 100% 0 0)' },
+              { clipPath: 'inset(0 0% 0 0)', duration: 1.4, ease: 'power3.out', delay: 0.15 }
+            );
+          }
+        }
+      }
+    }
+  });
+
+})();
