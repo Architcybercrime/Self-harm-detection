@@ -35,10 +35,10 @@
   when you add a real image.
 */
 .bio-image {
-width: 100%;
-aspect-ratio: 3/4;
-overflow: hidden;
-background: url("../images/intro-self-harm.png") center/contain no-repeat;
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  background: linear-gradient(160deg, #8B3A3A 0%, #5C2A2A 40%, #3A1A1A 100%);
 }
 .bio-text {
   padding-top: 40px;
@@ -449,46 +449,45 @@ background: url("../images/intro-self-harm.png") center/contain no-repeat;
 
 
 /* ══════════════════════════════════════════════════════════
-   HORIZONTAL SLIDE — Section 2 → Section 3
+   HORIZONTAL SCROLL PANELS (hx-)
+   Two groups: A (Bio→RedBlocks) and B (Chapter→PRECISION)
+   Each group has:
+   - .hx-outer  : clips overflow, gives 100vh height
+   - .hx-track  : 200vw wide flex row of two panels
+   - .hx-panel  : 100vw wide, 100vh tall each
+   GSAP pins .hx-outer and slides .hx-track left on scroll.
    ══════════════════════════════════════════════════════════ */
 
-/* ══════════════════════════════════════════════════════════
-   HORIZONTAL SCROLL — Section 2 → Section 3
-   Works exactly like vertical scroll but sideways.
-   GSAP pins the outer div, then slides the inner track
-   horizontally as you scroll down. When track reaches
-   the end, GSAP unpins and normal scroll resumes.
-   ══════════════════════════════════════════════════════════ */
-
-/* Outer container — GSAP pins this to the viewport */
-.hscroll-outer {
+.hx-outer {
   position: relative;
-  overflow: hidden;   /* hide the off-screen panel */
   width: 100%;
+  height: 100vh;        /* critical — gives the wrapper real height */
+  overflow: hidden;
 }
 
-/* Inner track — 200vw wide, holds both panels side by side.
-   GSAP moves this LEFT by 100vw to reveal panel 2. */
-.hscroll-track {
+.hx-track {
   display: flex;
-  width: 200vw;       /* exactly 2 full-screen widths */
+  flex-direction: row;
+  width: 200vw;
+  height: 100%;
   will-change: transform;
 }
 
-/* Each panel = exactly one viewport wide and auto-height */
-.hscroll-panel {
+.hx-panel {
   width: 100vw;
+  height: 100%;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* Sections inside panels fill the panel width */
-.hscroll-section {
+/* Sections inside panels fill the panel completely */
+.hx-section {
   width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-/* ── SCROLL HINT ─────────────────────────────────────────
-   Small animated indicator at the bottom of panel 1
-   telling the user to keep scrolling                     */
+/* Scroll hint — bottom right, bouncing arrow */
 .hscroll-hint {
   position: absolute;
   bottom: 32px;
@@ -503,20 +502,17 @@ background: url("../images/intro-self-harm.png") center/contain no-repeat;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  animation: hintBounce 1.8s ease-in-out infinite;
   pointer-events: none;
+  animation: hintBounce 1.8s ease-in-out infinite;
 }
 .hscroll-hint svg { opacity: 0.5; }
-
 @keyframes hintBounce {
-  0%, 100% { transform: translateY(0);   opacity: 0.7; }
-  50%       { transform: translateY(6px); opacity: 1;   }
+  0%,100% { transform: translateY(0);   opacity: 0.7; }
+  50%      { transform: translateY(6px); opacity: 1;   }
 }
 
-/* ── PROGRESS DOTS ───────────────────────────────────────
-   Two dots at the bottom centre showing which panel
-   is currently visible                                   */
-.hscroll-dots {
+/* Progress dots */
+.hx-dots {
   position: absolute;
   bottom: 18px;
   left: 50%;
@@ -526,31 +522,119 @@ background: url("../images/intro-self-harm.png") center/contain no-repeat;
   z-index: 20;
   pointer-events: none;
 }
-.hscroll-dot {
+.hx-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: rgba(0,0,0,0.2);
   transition: background 0.3s, transform 0.3s;
 }
-.hscroll-dot.active {
+.hx-dot.active {
   background: var(--red);
   transform: scale(1.35);
 }
+.hx-dots.on-dark .hx-dot          { background: rgba(255,255,255,0.25); }
+.hx-dots.on-dark .hx-dot.active   { background: var(--white); }
 
-/* On dark panel 2, dots should be white */
-.hscroll-dots.on-dark .hscroll-dot {
-  background: rgba(255,255,255,0.25);
-}
-.hscroll-dots.on-dark .hscroll-dot.active {
-  background: var(--white);
-}
-
-/* ── RESPONSIVE ──────────────────────────────────────────
-   On very small screens keep normal vertical layout      */
+/* Mobile: stack vertically, no horizontal scroll */
 @media (max-width: 600px) {
-  .hscroll-track  { width: 100%; flex-direction: column; }
-  .hscroll-panel  { width: 100%; }
-  .hscroll-outer  { overflow: visible; }
-  .hscroll-hint   { display: none; }
+  .hx-outer  { height: auto; overflow: visible; }
+  .hx-track  { width: 100%; flex-direction: column; }
+  .hx-panel  { width: 100%; height: auto; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HORIZONTAL SCROLL GROUPS  (hs-*)
+   Three groups used across the page.
+   Each .hs-outer is pinned by GSAP while .hs-track slides.
+   ══════════════════════════════════════════════════════════ */
+
+/* Outer: clips the off-screen panel */
+.hs-outer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Track: two panels side by side = 200vw total */
+.hs-track {
+  display: flex;
+  width: 200vw;
+  will-change: transform;
+}
+
+/* Each panel = one full viewport width and height */
+.hs-panel {
+  width: 100vw;
+  flex-shrink: 0;
+  height: 100vh;   /* exact height — outer must match for pin to work */
+}
+
+/* Sections inside panels fill full panel */
+.hs-section {
+  width: 100%;
+  height: 100vh;
+}
+
+/* Ghost spacer panels — invisible, match background colour */
+.hs-ghost          { pointer-events: none; }
+.hs-ghost-white    { background: #fff; }
+.hs-ghost-dark     { background: #0D0D0D; }
+
+/* Scroll hint — animated arrow at bottom of panel */
+.hs-hint {
+  position: absolute;
+  bottom: 32px;
+  right: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: hsBounce 1.8s ease-in-out infinite;
+}
+.hs-hint svg { opacity: 0.5; }
+@keyframes hsBounce {
+  0%,100% { transform: translateY(0);   opacity:.7; }
+  50%      { transform: translateY(6px); opacity:1;  }
+}
+
+/* Progress dots */
+.hs-dots {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+.hs-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.2);
+  transition: background 0.3s, transform 0.3s;
+}
+.hs-dot.active {
+  background: var(--red);
+  transform: scale(1.35);
+}
+.hs-dots.light .hs-dot          { background: rgba(255,255,255,0.3); }
+.hs-dots.light .hs-dot.active   { background: #fff; }
+
+/* Responsive: disable horizontal scroll on mobile */
+@media (max-width: 600px) {
+  .hs-track  { width: 100%; flex-direction: column; }
+  .hs-panel  { width: 100%; }
+  .hs-outer  { overflow: visible; }
+  .hs-ghost  { display: none; }
+  .hs-hint   { display: none; }
 }

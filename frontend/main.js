@@ -378,68 +378,96 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
 
 
 /* ══════════════════════════════════════════════════════════
-   12. HORIZONTAL SCROLL — Section 2 → Section 3
+   12. HORIZONTAL SCROLL GROUPS
 
-   HOW IT WORKS:
-   GSAP ScrollTrigger PINS the outer wrapper to the viewport
-   while you scroll. While it is pinned, instead of the page
-   moving DOWN, the inner track moves LEFT — revealing Panel 2.
-   Once Panel 2 is fully visible, GSAP unpins the wrapper and
-   normal vertical scroll resumes into Section 4 and below.
+   Three groups, two behaviours:
 
-   It feels exactly like vertical scrolling — just sideways.
+   GROUP 1 (hs1): Bio → Red Blocks
+   Track starts at x:0 (Bio visible).
+   Scroll DOWN → track moves LEFT to -100vw → Red Blocks appears.
+
+   GROUP 2 (hs2): ghost → Chapter/Detection
+   Track starts at x:-100vw (Chapter off-screen LEFT, ghost visible).
+   Scroll DOWN → track moves RIGHT to 0 → Chapter slides in from left.
+
+   GROUP 3 (hs3): dark ghost → PRECISION
+   Track starts at x:-100vw (PRECISION off-screen LEFT, ghost visible).
+   Scroll DOWN → track moves RIGHT to 0 → PRECISION slides in from left.
    ══════════════════════════════════════════════════════════ */
 
 (function () {
-  const outer  = document.getElementById('hscrollOuter');
-  const track  = document.getElementById('hscrollTrack');
-  const dot1   = document.getElementById('hDot1');
-  const dot2   = document.getElementById('hDot2');
-  const dots   = document.querySelector('.hscroll-dots');
-
-  if (!outer || !track) return;
-
-  // On mobile (≤600px) we skip the horizontal scroll entirely
   if (window.innerWidth <= 600) return;
 
-  // The track must move left by exactly one panel width (100vw)
-  // scrub:true ties the movement directly to scroll progress
-  gsap.to(track, {
-    x: '-100vw',          // slide left by one full viewport width
-    ease: 'none',         // perfectly linear — matches scroll 1:1
-    scrollTrigger: {
-      trigger: outer,
-      start:  'top top',  // pin starts when outer hits viewport top
-      end:    '+=100%',   // scroll distance = 100% of outer height
-      pin:    true,       // freeze outer in place during scroll
-      scrub:  1,          // 1s smoothing lag (feels natural)
-      anticipatePin: 1,   // prevent jump when pin engages
+  /* ── GROUP 1: Bio → Red Blocks (slides in from RIGHT) ── */
+  const hs1     = document.getElementById('hs1');
+  const hs1t    = document.getElementById('hs1track');
+  const hs1d1   = document.getElementById('hs1d1');
+  const hs1d2   = document.getElementById('hs1d2');
+  const hs1dots = document.getElementById('hs1dots');
 
-      // Update the progress dots as scroll progresses
-      onUpdate: self => {
-        if (self.progress < 0.5) {
-          dot1.classList.add('active');
-          dot2.classList.remove('active');
-          dots.classList.remove('on-dark');
-        } else {
-          dot2.classList.add('active');
-          dot1.classList.remove('active');
-          dots.classList.add('on-dark');
-          // Trigger red block animations when panel 2 is visible
-          if (!track._redBlocksFired) {
-            track._redBlocksFired = true;
+  if (hs1 && hs1t) {
+    gsap.to(hs1t, {
+      x: '-100vw',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: hs1,
+        start: 'top top',
+        end: '+=100vh',
+        pin: true,
+        scrub: 1.5,
+        anticipatePin: 1,
+        onUpdate: self => {
+          const inPanel2 = self.progress >= 0.5;
+          hs1d1.classList.toggle('active', !inPanel2);
+          hs1d2.classList.toggle('active',  inPanel2);
+          hs1dots.classList.toggle('light',  inPanel2);
+          // Fire red block wipe animation once when panel 2 appears
+          if (inPanel2 && !hs1t._fired) {
+            hs1t._fired = true;
             gsap.fromTo('#redRect1',
               { clipPath: 'inset(0 100% 0 0)' },
-              { clipPath: 'inset(0 0% 0 0)', duration: 1.2, ease: 'power3.out' }
-            );
+              { clipPath: 'inset(0 0% 0 0)', duration: 1.2, ease: 'power3.out' });
             gsap.fromTo('#redRect2',
               { clipPath: 'inset(0 100% 0 0)' },
-              { clipPath: 'inset(0 0% 0 0)', duration: 1.4, ease: 'power3.out', delay: 0.15 }
-            );
+              { clipPath: 'inset(0 0% 0 0)', duration: 1.4, ease: 'power3.out', delay: 0.15 });
           }
         }
       }
-    }
-  });
+    });
+  }
+
+  /* GROUP 2 removed — Chapter/Detection is now plain vertical scroll */
+
+  /* ── GROUP 3: PRECISION slides in from RIGHT (same as hs1) ── */
+  // Structure: [dark-ghost | PRECISION]
+  // Track starts at x:0 → ghost is visible (matches photo-grid bg colour).
+  // Scroll down → track moves LEFT to -100vw → PRECISION slides in from right.
+  const hs3     = document.getElementById('hs3');
+  const hs3t    = document.getElementById('hs3track');
+  const hs3d1   = document.getElementById('hs3d1');
+  const hs3d2   = document.getElementById('hs3d2');
+  const hs3dots = document.getElementById('hs3dots');
+
+  if (hs3 && hs3t) {
+    // Track starts at x:0 — ghost panel fills viewport, PRECISION is off-screen right
+    gsap.to(hs3t, {
+      x: '-100vw',          // slide left → PRECISION appears from the right
+      ease: 'none',
+      scrollTrigger: {
+        trigger: hs3,
+        start: 'top top',
+        end: '+=100vh',
+        pin: true,
+        scrub: 1.5,
+        anticipatePin: 1,
+        onUpdate: self => {
+          const inPanel2 = self.progress >= 0.5;
+          hs3d1.classList.toggle('active', !inPanel2);
+          hs3d2.classList.toggle('active',  inPanel2);
+          hs3dots.classList.toggle('light', inPanel2); // white dots on dark PRECISION bg
+        }
+      }
+    });
+  }
 
 })();
