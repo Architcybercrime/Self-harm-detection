@@ -23,7 +23,7 @@ def load_data(filepath):
     print("Loading dataset...")
     df = pd.read_csv(filepath)
     df.dropna(subset=['text', 'class'], inplace=True)
-    df = df.sample(n=20000, random_state=42)
+    # Using full dataset for maximum accuracy
     print(f"Total samples : {len(df)}")
     print(f"Class distribution:\n{df['class'].value_counts()}")
     return df
@@ -44,7 +44,7 @@ def extract_features(df):
         scores = sia.polarity_scores(str(text))
         sentiments.append(scores['compound'])
         neg_scores.append(scores['neg'])
-        if (i + 1) % 5000 == 0:
+        if (i + 1) % 10000 == 0:
             print(f"  Progress: {i+1}/{total} rows done...")
 
     df['sentiment'] = sentiments
@@ -144,6 +144,7 @@ def save_model(model, tfidf):
 if __name__ == "__main__":
     print("="*55)
     print("  SELF HARM DETECTION - MODEL TRAINING")
+    print("  Training on FULL 232k dataset")
     print("="*55)
 
     df = load_data('data/Suicide_Detection.csv')

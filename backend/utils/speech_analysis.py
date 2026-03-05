@@ -21,24 +21,17 @@ except ImportError:
 
 
 def analyze_audio_file(audio_path):
-    """
-    Analyze audio file for speech features.
-    Extracts: tempo, pitch, energy, speech text
-    """
+    """Analyze audio file for speech features."""
     if not LIBROSA_AVAILABLE:
         return {"error": "librosa not installed"}
 
     try:
-        # Load audio
         y, sample_rate = librosa.load(audio_path, sr=None)
 
-        # Extract features
         tempo      = extract_tempo(y, sample_rate)
         pitch      = extract_pitch(y, sample_rate)
         energy     = extract_energy(y)
         mfcc_score = extract_mfcc_features(y, sample_rate)
-
-        # Calculate risk score
         risk_score = calculate_speech_risk(tempo, pitch, energy)
 
         result = {
@@ -52,7 +45,6 @@ def analyze_audio_file(audio_path):
             "interpretation":    interpret_speech(tempo, pitch, energy)
         }
 
-        # Also transcribe if possible
         if SR_AVAILABLE:
             transcription = transcribe_audio(audio_path)
             result["transcription"] = transcription
@@ -105,28 +97,25 @@ def extract_mfcc_features(y, sr):
 def calculate_speech_risk(tempo, pitch, energy):
     """
     Calculate speech-based risk score.
-    Clinical indicators of depression/distress:
-    - Very slow tempo (flat affect)
-    - Low pitch (monotone voice)
-    - Low energy (quiet, withdrawn)
+    Clinical indicators:
+    - Very slow tempo = flat affect
+    - Low pitch = monotone voice
+    - Low energy = withdrawn
     """
     risk = 0.0
 
-    # Tempo risk: very slow speech = higher risk
     if tempo < 60:
         risk += 0.35
     elif tempo < 80:
         risk += 0.20
     elif tempo > 140:
-        risk += 0.10  # very fast = anxiety
+        risk += 0.10
 
-    # Pitch risk: very low pitch = monotone = higher risk
     if pitch < 100:
         risk += 0.30
     elif pitch < 150:
         risk += 0.15
 
-    # Energy risk: very low energy = withdrawn = higher risk
     if energy < 0.01:
         risk += 0.35
     elif energy < 0.03:
@@ -200,17 +189,27 @@ def record_from_microphone(duration=5):
     try:
         recognizer = sr.Recognizer()
         with sr.Microphone() as source:
-            print(f"Recording for {duration} seconds...")
+            print(f"Adjusting for ambient noise...")
             recognizer.adjust_for_ambient_noise(source, duration=1)
-            audio = recognizer.listen(source, timeout=duration)
+            print(f"Recording for {duration} seconds... SPEAK NOW!")
+            audio = recognizer.record(source, duration=duration)
+
+        print("Recording done! Analyzing...")
 
         # Save to temp file
         temp_path = "temp_audio.wav"
         with open(temp_path, "wb") as f:
             f.write(audio.get_wav_data())
 
-        # Analyze
+        # Analyze with librosa
         result = analyze_audio_file(temp_path)
+
+        # Try transcription
+        try:
+            text = recognizer.recognize_google(audio)
+            result["transcription"] = text
+        except:
+            result["transcription"] = "Could not transcribe"
 
         # Cleanup
         if os.path.exists(temp_path):
@@ -225,7 +224,7 @@ def record_from_microphone(duration=5):
 # ── TEST ─────────────────────────────────────────────
 if __name__ == "__main__":
     print("Speech Analysis Module")
-    print(f"Librosa available       : {LIBROSA_AVAILABLE}")
+    print(f"Librosa available          : {LIBROSA_AVAILABLE}")
     print(f"SpeechRecognition available: {SR_AVAILABLE}")
     print("\nModule loaded successfully!")
     print("To test: call record_from_microphone() or analyze_audio_file('audio.wav')")
