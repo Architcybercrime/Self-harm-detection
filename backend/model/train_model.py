@@ -23,7 +23,7 @@ def load_data(filepath):
     print("Loading dataset...")
     df = pd.read_csv(filepath)
     df.dropna(subset=['text', 'class'], inplace=True)
-    # Using full dataset for maximum accuracy
+    df = df.sample(n=50000, random_state=42)
     print(f"Total samples : {len(df)}")
     print(f"Class distribution:\n{df['class'].value_counts()}")
     return df
@@ -57,9 +57,9 @@ def train_models(df):
 
     print("\nBuilding TF-IDF features...")
     tfidf = TfidfVectorizer(
-        max_features=5000,
+        max_features=3000,
         ngram_range=(1, 2),
-        min_df=3
+        min_df=5
     )
     X_tfidf = tfidf.fit_transform(df['clean_text']).toarray()
 
@@ -144,7 +144,7 @@ def save_model(model, tfidf):
 if __name__ == "__main__":
     print("="*55)
     print("  SELF HARM DETECTION - MODEL TRAINING")
-    print("  Training on FULL 232k dataset")
+    print("  Training on 50k samples - optimized for RAM")
     print("="*55)
 
     df = load_data('data/Suicide_Detection.csv')
