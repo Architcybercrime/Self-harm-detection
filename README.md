@@ -68,7 +68,7 @@ Self-harm-detection/
 
 | Metric | Score |
 |---|---|
-| Accuracy | **91.8%** |
+| Accuracy | **92.2%** |
 | Precision | 92% |
 | Recall | 92% |
 | F1-Score | 0.92 |

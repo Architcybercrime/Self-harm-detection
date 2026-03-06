@@ -200,7 +200,7 @@ def predict_multimodal():
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
-    print("  Accuracy: 91.8%")
+    print("  Accuracy: 92.2%")
     print("  Endpoints:")
     print("    GET  /api/health")
     print("    POST /api/predict")
