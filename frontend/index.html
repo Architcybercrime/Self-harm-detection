@@ -6,7 +6,7 @@
   <title>SafeSignal — Beyond Detection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,700;0,900;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,700;0,900;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <link rel="stylesheet" href="css/base.css">
@@ -24,14 +24,14 @@
       <div class="brand-num">A<span>I</span></div>
     </div>
     <div class="nav-right">
-      <div class="nav-chapters">CHAPTERS
+      <div class="nav-chapters" data-i18n="nav-chapters">CHAPTERS
         <svg viewBox="0 0 10 6" width="12" height="12" style="display:inline-block;vertical-align:middle;"><path d="M0 0l5 6 5-6z"/></svg>
       </div>
       <div class="nav-menu"><span></span><span></span></div>
     </div>
   </nav>
   <button class="hero-cta" onclick="document.getElementById('analyze').scrollIntoView({behavior:'smooth'})">
-    <span class="plus">+</span> ANALYSE TEXT
+    <span class="plus">+</span> <span data-i18n="cta-analyse">ANALYSE TEXT</span>
   </button>
 
   <!-- SECTION 1: HERO -->
@@ -39,9 +39,9 @@
     <div class="hero-bg">
       <div class="hero-gradient-overlay" id="heroOverlay"></div>
     </div>
-    <h1 class="hero-title" id="heroTitle">BEYOND<br>DETECTION</h1>
+    <h1 class="hero-title" id="heroTitle"><span data-i18n="hero-line1">BEYOND</span><br><span data-i18n="hero-line2">DETECTION</span></h1>
     <div class="hero-scroll">
-      <span class="hero-scroll-label">SCROLL TO EXPLORE</span>
+      <span class="hero-scroll-label" data-i18n="scroll-label">SCROLL TO EXPLORE</span>
       <div class="hero-scroll-line"></div>
     </div>
   </section>
@@ -54,15 +54,15 @@
           <div class="bio-section">
             <div class="bio-image-wrap"><div class="bio-image"></div></div>
             <div class="bio-text">
-              <p>Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
-              <p>Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
+              <p data-i18n="bio-p1">Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
+              <p data-i18n="bio-p2">Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
               <div class="bio-tabs">
-                <div class="bio-tab active"><div class="dot"></div>HOW IT WORKS</div>
-                <div class="bio-tab"><div class="dot" style="background:var(--muted)"></div>STATS</div>
+                <div class="bio-tab active"><div class="dot"></div><span data-i18n="tab-how">HOW IT WORKS</span></div>
+                <div class="bio-tab"><div class="dot" style="background:var(--muted)"></div><span data-i18n="tab-stats">STATS</span></div>
               </div>
             </div>
           </div>
-          <div class="hs-hint"><span>SCROLL</span>
+          <div class="hs-hint"><span data-i18n="hint-scroll">SCROLL</span>
             <svg viewBox="0 0 12 20" width="12" height="20"><path d="M6 0v16M1 11l5 6 5-6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
         </section>
@@ -86,13 +86,13 @@
   <!-- SECTION 4: CHAPTER / DETECTION (normal vertical scroll) -->
   <section class="chapter-section section-white">
     <div class="chapter-left reveal-left">
-      <div class="chapter-label"><div class="dot"></div><div class="chapter-label-text">DETECTION</div></div>
-      <div class="chapter-quote">"The words we choose reveal more about our state of mind than we realise."</div>
+      <div class="chapter-label"><div class="dot"></div><div class="chapter-label-text" data-i18n="ch-label">DETECTION</div></div>
+      <div class="chapter-quote" data-i18n="ch-quote">"The words we choose reveal more about our state of mind than we realise."</div>
       <div class="chapter-small-img"></div>
     </div>
     <div class="chapter-right">
       <div class="chapter-right-img"></div>
-      <div class="chapter-body reveal">A system that learns the subtle grammar of distress: the shift from "I feel tired" to "I feel nothing". Pattern recognition that goes deeper than any keyword list.</div>
+      <div class="chapter-body reveal" data-i18n="ch-body">A system that learns the subtle grammar of distress: the shift from "I feel tired" to "I feel nothing". Pattern recognition that goes deeper than any keyword list.</div>
     </div>
   </section>
 
@@ -156,21 +156,21 @@
 
       <div class="analyze-chapter-label">
         <div class="dot"></div>
-        <div class="analyze-chapter-label-text">LIVE ANALYSIS</div>
+        <div class="analyze-chapter-label-text" data-i18n="analyze-label">LIVE ANALYSIS</div>
       </div>
 
-      <h2 class="analyze-title reveal">DETECT<br>SIGNALS</h2>
+      <h2 class="analyze-title reveal"><span data-i18n="analyze-title1">DETECT</span><br><span data-i18n="analyze-title2">SIGNALS</span></h2>
 
       <!-- TAB SWITCHER -->
       <div class="analyze-tabs">
         <button class="analyze-tab active" data-tab="text">
-          <span class="tab-icon">&#9632;</span> TEXT
+          <span class="tab-icon">&#9632;</span> <span data-i18n="tab-text">TEXT</span>
         </button>
         <button class="analyze-tab" data-tab="face">
-          <span class="tab-icon">&#9632;</span> FACIAL
+          <span class="tab-icon">&#9632;</span> <span data-i18n="tab-facial">FACIAL</span>
         </button>
         <button class="analyze-tab" data-tab="voice">
-          <span class="tab-icon">&#9632;</span> VOICE
+          <span class="tab-icon">&#9632;</span> <span data-i18n="tab-voice">VOICE</span>
         </button>
       </div>
 
@@ -178,10 +178,10 @@
       <div class="analyze-panel active" id="tab-text">
         <div class="analyze-grid">
           <div>
-            <p class="analyze-desc">Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
-            <label class="input-label" for="textInput">// INPUT TEXT</label>
-            <textarea id="textInput" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
-            <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> RUN ANALYSIS</button>
+            <p class="analyze-desc" data-i18n="text-desc">Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
+            <label class="input-label" for="textInput" data-i18n="input-label">// INPUT TEXT</label>
+            <textarea id="textInput" data-i18n-placeholder="text-placeholder" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
+            <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> <span data-i18n="btn-run">RUN ANALYSIS</span></button>
           </div>
           <div>
             <div id="result">
@@ -198,23 +198,23 @@
       <div class="analyze-panel" id="tab-face">
         <div class="analyze-grid">
           <div>
-            <p class="analyze-desc">The facial analysis module reads micro-expressions and affective states through your camera feed — detecting distress signals invisible to the naked eye.</p>
+            <p class="analyze-desc" data-i18n="face-desc">The facial analysis module reads micro-expressions and affective states through your camera feed — detecting distress signals invisible to the naked eye.</p>
             <div class="camera-wrap" id="cameraWrap">
               <video id="cameraFeed" autoplay muted playsinline></video>
               <div class="camera-overlay">
                 <div class="scan-line"></div>
                 <div class="face-box" id="faceBox"></div>
               </div>
-              <div class="camera-status" id="cameraStatus">AWAITING FEED</div>
+              <div class="camera-status" id="cameraStatus" data-i18n="cam-status">AWAITING FEED</div>
             </div>
             <div class="camera-btns">
-              <button class="analyze-btn" id="startCameraBtn" onclick="startCamera()"><span class="plus">+</span> START CAMERA</button>
+              <button class="analyze-btn" id="startCameraBtn" onclick="startCamera()"><span class="plus">+</span> <span data-i18n="btn-start-cam">START CAMERA</span></button>
               <button class="analyze-btn btn-outline" id="stopCameraBtn" onclick="stopCamera()" style="display:none"><span class="plus">&#9632;</span> STOP</button>
             </div>
           </div>
           <div>
             <div class="result-pending-wrap">
-              <div class="result-pending-label">// DETECTED EMOTIONS</div>
+              <div class="result-pending-label" data-i18n="face-result-label">// DETECTED EMOTIONS</div>
               <div class="emotion-bars" id="emotionBars">
                 <div class="emotion-row"><span class="emotion-name">NEUTRAL</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
                 <div class="emotion-row"><span class="emotion-name">SADNESS</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
@@ -224,7 +224,7 @@
               </div>
               <div class="backend-badge">
                 <span class="badge-dot"></span>
-                BACKEND INTEGRATION IN PROGRESS
+                <span data-i18n="backend-badge">BACKEND INTEGRATION IN PROGRESS</span>
               </div>
             </div>
           </div>
@@ -235,7 +235,7 @@
       <div class="analyze-panel" id="tab-voice">
         <div class="analyze-grid">
           <div>
-            <p class="analyze-desc">The voice analysis module captures speech patterns, tone shifts, and prosodic features — identifying emotional markers associated with psychological distress.</p>
+            <p class="analyze-desc" data-i18n="voice-desc">The voice analysis module captures speech patterns, tone shifts, and prosodic features — identifying emotional markers associated with psychological distress.</p>
             <div class="mic-wrap" id="micWrap">
               <div class="mic-visualiser" id="micVis">
                 <div class="mic-bar" style="height:20%"></div>
@@ -254,17 +254,17 @@
                   <path d="M5 10a7 7 0 0 0 14 0M12 19v3M9 22h6"/>
                 </svg>
               </div>
-              <div class="mic-status" id="micStatus">READY TO RECORD</div>
+              <div class="mic-status" id="micStatus" data-i18n="mic-status">READY TO RECORD</div>
               <div class="mic-timer" id="micTimer">00:00</div>
             </div>
             <div class="camera-btns">
-              <button class="analyze-btn" id="startMicBtn" onclick="startMic()"><span class="plus">+</span> START RECORDING</button>
+              <button class="analyze-btn" id="startMicBtn" onclick="startMic()"><span class="plus">+</span> <span data-i18n="btn-start-mic">START RECORDING</span></button>
               <button class="analyze-btn btn-outline" id="stopMicBtn" onclick="stopMic()" style="display:none"><span class="plus">&#9632;</span> STOP</button>
             </div>
           </div>
           <div>
             <div class="result-pending-wrap">
-              <div class="result-pending-label">// VOICE SIGNALS</div>
+              <div class="result-pending-label" data-i18n="voice-result-label">// VOICE SIGNALS</div>
               <div class="emotion-bars" id="voiceBars">
                 <div class="emotion-row"><span class="emotion-name">PITCH STRESS</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
                 <div class="emotion-row"><span class="emotion-name">SPEECH RATE</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
@@ -274,7 +274,7 @@
               </div>
               <div class="backend-badge">
                 <span class="badge-dot"></span>
-                BACKEND INTEGRATION IN PROGRESS
+                <span data-i18n="backend-badge">BACKEND INTEGRATION IN PROGRESS</span>
               </div>
             </div>
           </div>
@@ -289,10 +289,10 @@
     <div class="footer-inner">
       <div class="footer-logo">SAFE<span>SIGNAL</span></div>
       <div class="footer-links">
-        <a class="footer-link">The System</a><a class="footer-link">Partners</a><a class="footer-link small">Privacy Policy</a>
-        <a class="footer-link">The Research</a><a class="footer-link">News</a><a class="footer-link small">Cookie Policy</a>
-        <a class="footer-link">Dataset</a><a class="footer-link">Contacts</a><a class="footer-link small">Legal Notice</a>
-        <a class="footer-link">Team</a>
+        <a class="footer-link" data-i18n="fl-system">The System</a><a class="footer-link" data-i18n="fl-partners">Partners</a><a class="footer-link small" data-i18n="fl-privacy">Privacy Policy</a>
+        <a class="footer-link" data-i18n="fl-research">The Research</a><a class="footer-link" data-i18n="fl-news">News</a><a class="footer-link small" data-i18n="fl-cookie">Cookie Policy</a>
+        <a class="footer-link" data-i18n="fl-dataset">Dataset</a><a class="footer-link" data-i18n="fl-contacts">Contacts</a><a class="footer-link small" data-i18n="fl-legal">Legal Notice</a>
+        <a class="footer-link" data-i18n="fl-team">Team</a>
       </div>
       <div class="footer-social">
         <div class="social-icon">GH</div><div class="social-icon">TW</div>

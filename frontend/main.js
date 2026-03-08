@@ -253,32 +253,16 @@ document.querySelectorAll('.reveal, .reveal-left').forEach(el => {
 
 
 /* ══════════════════════════════════════════════════════════
-   10. ANALYSIS ENGINE
-
-   WHAT IT DOES:
-   Scores text against three keyword lists (high/medium/low risk).
-   Each matched keyword adds to the score (max 100).
-   Determines a level: HIGH RISK / MODERATE / LOW RISK.
-   Colours the result text and fills the progress bar.
-
-   NOTE: This is a demonstration keyword matcher.
-   A production system would use a trained ML model
-   (e.g. Python + FastAPI — see the React+Node project).
+   10. ANALYSIS ENGINE — BACKEND STUB
+   
+   Keyword logic removed. 
+   Your partner's backend will POST to an API and return:
+   { level: 'HIGH RISK' | 'MODERATE' | 'LOW RISK', score: 0-100, signals: [...] }
+   
+   TO INTEGRATE: replace the TODO block below with a fetch()
+   call to your backend endpoint and pass the response into
+   displayResult(level, score, signals).
    ══════════════════════════════════════════════════════════ */
-const keywords = {
-  high: [
-    'suicide', 'kill myself', 'end my life', 'want to die',
-    'no reason to live', 'hurting myself', 'cutting', 'overdose'
-  ],
-  medium: [
-    'hopeless', 'worthless', 'numb', 'trapped', 'empty',
-    'burden', 'disappear', 'cant go on', "can't go on", 'give up'
-  ],
-  low: [
-    'sad', 'upset', 'crying', 'tired', 'stressed',
-    'anxious', 'overwhelmed', 'alone', 'hurt'
-  ]
-};
 
 const riskColours = {
   'HIGH RISK': '#E4032E',
@@ -286,69 +270,54 @@ const riskColours = {
   'LOW RISK':  '#2A8A4A'
 };
 
-const riskNotes = {
-  'HIGH RISK': 'Significant distress signals detected. This text contains language strongly associated with self-harm ideation.',
-  'MODERATE':  'Several distress markers identified. Further context and professional evaluation advised.',
-  'LOW RISK':  'Mild distress language detected. Continued monitoring may be appropriate.'
-};
+function displayResult(level, score, signals) {
+  const colour  = riskColours[level] || '#000';
+  const levelEl = document.getElementById('resultLevel');
+  levelEl.textContent = level;
+  levelEl.style.color = colour;
+
+  const bar = document.getElementById('resultBar');
+  bar.style.background = colour;
+  bar.style.width = '0%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.width = score + '%';
+  }));
+
+  document.getElementById('resultTags').innerHTML =
+    (signals || []).map(s => `<span class="result-tag">${s}</span>`).join('');
+
+  const resultEl = document.getElementById('result');
+  resultEl.classList.add('show');
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
 function runAnalysis() {
   const text = document.getElementById('textInput').value.trim();
   if (!text) return;
 
-  // Show loading state
   const btn = document.getElementById('analyzeBtn');
   btn.innerHTML = 'ANALYSING...';
-  btn.disabled = true;
+  btn.disabled  = true;
 
-  // Simulate async processing (800ms)
+  // ── TODO: replace this block with your backend API call ──
+  // Example:
+  // fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ text }) ... })
+  //   .then(r => r.json())
+  //   .then(data => displayResult(data.level, data.score, data.signals))
+  //   .finally(() => { btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS'; btn.disabled = false; });
+  // ─────────────────────────────────────────────────────────
+
+  // Placeholder until backend is ready
   setTimeout(() => {
-    const lower = text.toLowerCase();
-    let score = 0;
-    const found = [];
-
-    keywords.high.forEach(k   => { if (lower.includes(k)) { score += 28; found.push(k); } });
-    keywords.medium.forEach(k => { if (lower.includes(k)) { score += 12; found.push(k); } });
-    keywords.low.forEach(k    => { if (lower.includes(k)) { score += 5;  found.push(k); } });
-
-    score = Math.min(100, score); // cap at 100
-    const level  = score >= 50 ? 'HIGH RISK' : score >= 18 ? 'MODERATE' : 'LOW RISK';
-    const colour = riskColours[level];
-
-    // Update UI
-    const levelEl = document.getElementById('resultLevel');
-    levelEl.textContent  = level;
-    levelEl.style.color  = colour;
-
-    // Animate progress bar (reset to 0 first so transition plays)
-    const bar = document.getElementById('resultBar');
-    bar.style.background = colour;
-    bar.style.width = '0%';
-    // Double rAF ensures the browser registers the 0% before animating
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      bar.style.width = score + '%';
-    }));
-
-    // Render signal tags
-    const signals = found.length ? found : ['no signals found'];
-    document.getElementById('resultTags').innerHTML =
-      signals.map(s => `<span class="result-tag">${s}</span>`).join('');
-
-    document.getElementById('resultNote').textContent = riskNotes[level];
-
-    // Show result panel
-    const resultEl = document.getElementById('result');
-    resultEl.classList.add('show');
-    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    // Reset button
+    document.getElementById('resultLevel').textContent = 'AWAITING BACKEND';
+    document.getElementById('resultLevel').style.color = 'var(--muted)';
+    document.getElementById('result').classList.add('show');
     btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS';
     btn.disabled  = false;
-
-  }, 800);
+  }, 600);
 }
 
-// Allow pressing Enter in textarea to trigger analysis
+// Ctrl+Enter to run
 document.getElementById('textInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.ctrlKey) runAnalysis();
 });
@@ -587,3 +556,186 @@ function stopMic() {
   document.getElementById('startMicBtn').style.display = 'inline-flex';
   document.getElementById('stopMicBtn').style.display  = 'none';
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   16. LANGUAGE SWITCHER — EN / HI / FR
+
+   Every translatable element has data-i18n="key" in HTML.
+   Placeholders use data-i18n-placeholder="key".
+   switchLang() swaps all text content at once.
+   Hindi uses Noto Sans Devanagari (loaded in <head>).
+   ══════════════════════════════════════════════════════════ */
+
+const translations = {
+  EN: {
+    'nav-chapters':       'CHAPTERS',
+    'cta-analyse':        'ANALYSE TEXT',
+    'hero-line1':         'BEYOND',
+    'hero-line2':         'DETECTION',
+    'scroll-label':       'SCROLL TO EXPLORE',
+    'bio-p1':             'Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.',
+    'bio-p2':             'Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.',
+    'tab-how':            'HOW IT WORKS',
+    'tab-stats':          'STATS',
+    'hint-scroll':        'SCROLL',
+    'ch-label':           'DETECTION',
+    'ch-quote':           '"The words we choose reveal more about our state of mind than we realise."',
+    'ch-body':            'A system that learns the subtle grammar of distress: the shift from "I feel tired" to "I feel nothing". Pattern recognition that goes deeper than any keyword list.',
+    'analyze-label':      'LIVE ANALYSIS',
+    'analyze-title1':     'DETECT',
+    'analyze-title2':     'SIGNALS',
+    'tab-text':           'TEXT',
+    'tab-facial':         'FACIAL',
+    'tab-voice':          'VOICE',
+    'text-desc':          'Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.',
+    'input-label':        '// INPUT TEXT',
+    'text-placeholder':   'Type or paste text here... (Ctrl+Enter to run)',
+    'btn-run':            'RUN ANALYSIS',
+    'face-desc':          'The facial analysis module reads micro-expressions and affective states through your camera feed — detecting distress signals invisible to the naked eye.',
+    'cam-status':         'AWAITING FEED',
+    'btn-start-cam':      'START CAMERA',
+    'face-result-label':  '// DETECTED EMOTIONS',
+    'backend-badge':      'BACKEND INTEGRATION IN PROGRESS',
+    'voice-desc':         'The voice analysis module captures speech patterns, tone shifts, and prosodic features — identifying emotional markers associated with psychological distress.',
+    'mic-status':         'READY TO RECORD',
+    'btn-start-mic':      'START RECORDING',
+    'voice-result-label': '// VOICE SIGNALS',
+    'fl-system':          'The System',
+    'fl-partners':        'Partners',
+    'fl-privacy':         'Privacy Policy',
+    'fl-research':        'The Research',
+    'fl-news':            'News',
+    'fl-cookie':          'Cookie Policy',
+    'fl-dataset':         'Dataset',
+    'fl-contacts':        'Contacts',
+    'fl-legal':           'Legal Notice',
+    'fl-team':            'Team',
+  },
+
+  HI: {
+    'nav-chapters':       'अध्याय',
+    'cta-analyse':        'पाठ विश्लेषण',
+    'hero-line1':         'परे',
+    'hero-line2':         'पहचान के',
+    'scroll-label':       'नीचे स्क्रॉल करें',
+    'bio-p1':             'हर साल, लाखों लोग संदेशों, डायरी और सोशल पोस्ट के ज़रिए अपनी पीड़ा व्यक्त करते हैं। अधिकांश अनदेखे रह जाते हैं। SafeSignal इसे बदलने के लिए बनाया गया है।',
+    'bio-p2':             'नैदानिक डेटासेट पर प्रशिक्षित प्राकृतिक भाषा प्रसंस्करण का उपयोग करते हुए, यह प्रणाली आत्म-नुकसान की भावना से जुड़े भाषाई पैटर्न की पहचान करती है — केवल शब्दों से नहीं, बल्कि संदर्भ, भावना और अर्थ समूहों से।',
+    'tab-how':            'यह कैसे काम करता है',
+    'tab-stats':          'आँकड़े',
+    'hint-scroll':        'स्क्रॉल',
+    'ch-label':           'पहचान',
+    'ch-quote':           '"हमारे शब्द हमारी मानसिक स्थिति के बारे में उससे कहीं अधिक बताते हैं जितना हम महसूस करते हैं।"',
+    'ch-body':            'एक ऐसी प्रणाली जो पीड़ा की सूक्ष्म भाषा सीखती है — "मैं थका हुआ हूँ" से "मुझे कुछ महसूस नहीं होता" तक के बदलाव को। पैटर्न पहचान जो किसी भी शब्द सूची से गहरी है।',
+    'analyze-label':      'सीधा विश्लेषण',
+    'analyze-title1':     'संकेत',
+    'analyze-title2':     'पहचानें',
+    'tab-text':           'पाठ',
+    'tab-facial':         'चेहरा',
+    'tab-voice':          'आवाज़',
+    'text-desc':          'नीचे कोई भी पाठ पेस्ट करें। इंजन भाषाई संकेतों, भावना प्रक्षेपवक्र और शब्दार्थ संदर्भ का विश्लेषण करता है।',
+    'input-label':        '// पाठ इनपुट करें',
+    'text-placeholder':   'यहाँ टाइप या पेस्ट करें...',
+    'btn-run':            'विश्लेषण करें',
+    'face-desc':          'चेहरे का विश्लेषण मॉड्यूल आपके कैमरे से सूक्ष्म भाव और भावनात्मक अवस्थाएं पढ़ता है — नग्न आँखों से अदृश्य संकट संकेतों का पता लगाता है।',
+    'cam-status':         'फ़ीड की प्रतीक्षा',
+    'btn-start-cam':      'कैमरा शुरू करें',
+    'face-result-label':  '// पहचानी गई भावनाएं',
+    'backend-badge':      'बैकएंड एकीकरण प्रगति में है',
+    'voice-desc':         'आवाज़ विश्लेषण मॉड्यूल भाषण पैटर्न, स्वर परिवर्तन और प्रोसोडिक विशेषताओं को कैप्चर करता है।',
+    'mic-status':         'रिकॉर्ड करने के लिए तैयार',
+    'btn-start-mic':      'रिकॉर्डिंग शुरू करें',
+    'voice-result-label': '// आवाज़ संकेत',
+    'fl-system':          'प्रणाली',
+    'fl-partners':        'साझेदार',
+    'fl-privacy':         'गोपनीयता नीति',
+    'fl-research':        'शोध',
+    'fl-news':            'समाचार',
+    'fl-cookie':          'कुकी नीति',
+    'fl-dataset':         'डेटासेट',
+    'fl-contacts':        'संपर्क',
+    'fl-legal':           'कानूनी सूचना',
+    'fl-team':            'टीम',
+  },
+
+  FR: {
+    'nav-chapters':       'CHAPITRES',
+    'cta-analyse':        'ANALYSER LE TEXTE',
+    'hero-line1':         'AU-DELÀ',
+    'hero-line2':         'DE LA DÉTECTION',
+    'scroll-label':       'FAIRE DÉFILER',
+    'bio-p1':             'Chaque année, des millions de personnes expriment leur détresse par écrit — dans des messages, des journaux et des publications. La plupart passent inaperçus. SafeSignal a été conçu pour changer cela.',
+    'bio-p2':             "Grâce au traitement du langage naturel entraîné sur des ensembles de données cliniques, le système identifie les schémas linguistiques associés à l'idéation suicidaire — pas seulement les mots-clés, mais le contexte, le sentiment et les clusters sémantiques.",
+    'tab-how':            'COMMENT ÇA MARCHE',
+    'tab-stats':          'STATISTIQUES',
+    'hint-scroll':        'DÉFILER',
+    'ch-label':           'DÉTECTION',
+    'ch-quote':           '"Les mots que nous choisissons révèlent plus sur notre état d\'esprit que nous ne le réalisons."',
+    'ch-body':            'Un système qui apprend la grammaire subtile de la détresse : le passage de "je me sens fatigué" à "je ne ressens rien". Une reconnaissance des schémas qui va au-delà de toute liste de mots-clés.',
+    'analyze-label':      'ANALYSE EN DIRECT',
+    'analyze-title1':     'DÉTECTER',
+    'analyze-title2':     'LES SIGNAUX',
+    'tab-text':           'TEXTE',
+    'tab-facial':         'VISAGE',
+    'tab-voice':          'VOIX',
+    'text-desc':          "Collez n'importe quel texte ci-dessous. Le moteur analyse les marqueurs linguistiques, la trajectoire des sentiments et le contexte sémantique — retournant un score de risque.",
+    'input-label':        '// SAISIR LE TEXTE',
+    'text-placeholder':   'Tapez ou collez du texte ici...',
+    'btn-run':            'LANCER L\'ANALYSE',
+    'face-desc':          "Le module d'analyse faciale lit les micro-expressions et les états affectifs via votre caméra — détectant des signaux de détresse invisibles à l'œil nu.",
+    'cam-status':         'EN ATTENTE DU FLUX',
+    'btn-start-cam':      'DÉMARRER LA CAMÉRA',
+    'face-result-label':  '// ÉMOTIONS DÉTECTÉES',
+    'backend-badge':      'INTÉGRATION BACKEND EN COURS',
+    'voice-desc':         "Le module d'analyse vocale capture les schémas de parole, les variations de ton et les caractéristiques prosodiques — identifiant les marqueurs émotionnels.",
+    'mic-status':         'PRÊT À ENREGISTRER',
+    'btn-start-mic':      'DÉMARRER L\'ENREGISTREMENT',
+    'voice-result-label': '// SIGNAUX VOCAUX',
+    'fl-system':          'Le Système',
+    'fl-partners':        'Partenaires',
+    'fl-privacy':         'Politique de confidentialité',
+    'fl-research':        'La Recherche',
+    'fl-news':            'Actualités',
+    'fl-cookie':          'Politique des cookies',
+    'fl-dataset':         'Jeu de données',
+    'fl-contacts':        'Contacts',
+    'fl-legal':           'Mentions légales',
+    'fl-team':            'Équipe',
+  }
+};
+
+function switchLang(lang) {
+  const t = translations[lang];
+  if (!t) return;
+
+  // Swap text content for all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+
+  // Swap placeholder for textarea
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (t[key] !== undefined) el.placeholder = t[key];
+  });
+
+  // Hindi needs Devanagari font on body text elements
+  document.body.classList.toggle('lang-hi', lang === 'HI');
+  document.body.classList.toggle('lang-fr', lang === 'FR');
+
+  // Update active button
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === lang);
+  });
+
+  // Store preference
+  window._currentLang = lang;
+}
+
+// Wire up the buttons
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    switchLang(this.textContent.trim());
+  });
+});

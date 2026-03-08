@@ -7,9 +7,10 @@
    Defined in :root {} with -- prefix.
    Used anywhere with var(--name).
    Change it once here → updates everywhere on the site.
-   ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,700;0,900;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+   IMPORTANT: @import MUST be the very first line of a CSS file.
+   Browsers ignore @import if anything (even a comment) comes before it.
+   ============================================================ */
 
 /* ── COLOUR PALETTE ─────────────────────────────────────── */
 :root {
@@ -107,4 +108,13 @@ body {
   z-index: 1000;
   width: 0%;
   transition: width 0.05s linear;
+}
+
+/* ── LANGUAGE OVERRIDES ───────────────────────────────────── */
+/* When Hindi is active, body text falls back to Devanagari */
+.lang-hi p,
+.lang-hi [data-i18n],
+.lang-hi textarea,
+.lang-hi .result-note {
+  font-family: 'Noto Sans Devanagari', var(--serif);
 }
