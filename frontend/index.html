@@ -150,27 +150,137 @@
     <div class="racenight-caption">Dataset — Clinical NLP Research</div>
   </section>
 
-  <!-- SECTION 8: ANALYSIS TOOL -->
+  <!-- SECTION 8: ANALYSIS TOOL — 3 tabs: Text / Face / Voice -->
   <section class="analyze-section section-light" id="analyze">
     <div class="analyze-inner">
-      <div class="analyze-chapter-label"><div class="dot"></div><div class="analyze-chapter-label-text">LIVE ANALYSIS</div></div>
+
+      <div class="analyze-chapter-label">
+        <div class="dot"></div>
+        <div class="analyze-chapter-label-text">LIVE ANALYSIS</div>
+      </div>
+
       <h2 class="analyze-title reveal">DETECT<br>SIGNALS</h2>
-      <div class="analyze-grid">
-        <div>
-          <p class="analyze-desc reveal">Paste any text below. The detection engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
-          <label class="input-label" for="textInput">// INPUT TEXT</label>
-          <textarea id="textInput" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
-          <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> RUN ANALYSIS</button>
-        </div>
-        <div>
-          <div id="result">
-            <div class="result-level" id="resultLevel">—</div>
-            <div class="result-bar-wrap"><div class="result-bar" id="resultBar"></div></div>
-            <div class="result-tags" id="resultTags"></div>
-            <p class="result-note" id="resultNote"></p>
+
+      <!-- TAB SWITCHER -->
+      <div class="analyze-tabs">
+        <button class="analyze-tab active" data-tab="text">
+          <span class="tab-icon">&#9632;</span> TEXT
+        </button>
+        <button class="analyze-tab" data-tab="face">
+          <span class="tab-icon">&#9632;</span> FACIAL
+        </button>
+        <button class="analyze-tab" data-tab="voice">
+          <span class="tab-icon">&#9632;</span> VOICE
+        </button>
+      </div>
+
+      <!-- TAB: TEXT ANALYSIS -->
+      <div class="analyze-panel active" id="tab-text">
+        <div class="analyze-grid">
+          <div>
+            <p class="analyze-desc">Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
+            <label class="input-label" for="textInput">// INPUT TEXT</label>
+            <textarea id="textInput" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
+            <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> RUN ANALYSIS</button>
+          </div>
+          <div>
+            <div id="result">
+              <div class="result-level" id="resultLevel">—</div>
+              <div class="result-bar-wrap"><div class="result-bar" id="resultBar"></div></div>
+              <div class="result-tags" id="resultTags"></div>
+              <p class="result-note" id="resultNote"></p>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- TAB: FACIAL EXPRESSION -->
+      <div class="analyze-panel" id="tab-face">
+        <div class="analyze-grid">
+          <div>
+            <p class="analyze-desc">The facial analysis module reads micro-expressions and affective states through your camera feed — detecting distress signals invisible to the naked eye.</p>
+            <div class="camera-wrap" id="cameraWrap">
+              <video id="cameraFeed" autoplay muted playsinline></video>
+              <div class="camera-overlay">
+                <div class="scan-line"></div>
+                <div class="face-box" id="faceBox"></div>
+              </div>
+              <div class="camera-status" id="cameraStatus">AWAITING FEED</div>
+            </div>
+            <div class="camera-btns">
+              <button class="analyze-btn" id="startCameraBtn" onclick="startCamera()"><span class="plus">+</span> START CAMERA</button>
+              <button class="analyze-btn btn-outline" id="stopCameraBtn" onclick="stopCamera()" style="display:none"><span class="plus">&#9632;</span> STOP</button>
+            </div>
+          </div>
+          <div>
+            <div class="result-pending-wrap">
+              <div class="result-pending-label">// DETECTED EMOTIONS</div>
+              <div class="emotion-bars" id="emotionBars">
+                <div class="emotion-row"><span class="emotion-name">NEUTRAL</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">SADNESS</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">ANXIETY</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">DISTRESS</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">CALM</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+              </div>
+              <div class="backend-badge">
+                <span class="badge-dot"></span>
+                BACKEND INTEGRATION IN PROGRESS
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: VOICE EMOTION -->
+      <div class="analyze-panel" id="tab-voice">
+        <div class="analyze-grid">
+          <div>
+            <p class="analyze-desc">The voice analysis module captures speech patterns, tone shifts, and prosodic features — identifying emotional markers associated with psychological distress.</p>
+            <div class="mic-wrap" id="micWrap">
+              <div class="mic-visualiser" id="micVis">
+                <div class="mic-bar" style="height:20%"></div>
+                <div class="mic-bar" style="height:40%"></div>
+                <div class="mic-bar" style="height:60%"></div>
+                <div class="mic-bar" style="height:80%"></div>
+                <div class="mic-bar" style="height:100%"></div>
+                <div class="mic-bar" style="height:80%"></div>
+                <div class="mic-bar" style="height:60%"></div>
+                <div class="mic-bar" style="height:40%"></div>
+                <div class="mic-bar" style="height:20%"></div>
+              </div>
+              <div class="mic-icon" id="micIcon">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="9" y="2" width="6" height="12" rx="3"/>
+                  <path d="M5 10a7 7 0 0 0 14 0M12 19v3M9 22h6"/>
+                </svg>
+              </div>
+              <div class="mic-status" id="micStatus">READY TO RECORD</div>
+              <div class="mic-timer" id="micTimer">00:00</div>
+            </div>
+            <div class="camera-btns">
+              <button class="analyze-btn" id="startMicBtn" onclick="startMic()"><span class="plus">+</span> START RECORDING</button>
+              <button class="analyze-btn btn-outline" id="stopMicBtn" onclick="stopMic()" style="display:none"><span class="plus">&#9632;</span> STOP</button>
+            </div>
+          </div>
+          <div>
+            <div class="result-pending-wrap">
+              <div class="result-pending-label">// VOICE SIGNALS</div>
+              <div class="emotion-bars" id="voiceBars">
+                <div class="emotion-row"><span class="emotion-name">PITCH STRESS</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">SPEECH RATE</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">TREMOR</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">FLAT AFFECT</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+                <div class="emotion-row"><span class="emotion-name">VOCAL ENERGY</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
+              </div>
+              <div class="backend-badge">
+                <span class="badge-dot"></span>
+                BACKEND INTEGRATION IN PROGRESS
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 

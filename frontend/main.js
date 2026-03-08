@@ -412,9 +412,9 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
       scrollTrigger: {
         trigger: hs1,
         start: 'top top',
-        end: '+=100vh',
+        end: '+=200vh',
         pin: true,
-        scrub: 1.5,
+        scrub: 3,
         anticipatePin: 1,
         onUpdate: self => {
           const inPanel2 = self.progress >= 0.5;
@@ -458,7 +458,7 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
         start: 'top top',
         end: '+=100vh',
         pin: true,
-        scrub: 1.5,
+        scrub: 0.3,
         anticipatePin: 1,
         onUpdate: self => {
           const inPanel2 = self.progress >= 0.5;
@@ -471,3 +471,119 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
   }
 
 })();
+
+
+/* ══════════════════════════════════════════════════════════
+   15. ANALYZE SECTION — TAB SWITCHER + CAMERA + MIC
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Tab switcher ── */
+document.querySelectorAll('.analyze-tab').forEach(tab => {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.analyze-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.analyze-panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+  });
+});
+
+/* ── Camera (Facial tab) ── */
+let cameraStream = null;
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      cameraStream = stream;
+      const video = document.getElementById('cameraFeed');
+      video.srcObject = stream;
+      document.getElementById('cameraWrap').classList.add('active');
+      document.getElementById('cameraStatus').textContent = 'FEED ACTIVE — AWAITING MODEL';
+      document.getElementById('startCameraBtn').style.display = 'none';
+      document.getElementById('stopCameraBtn').style.display  = 'inline-flex';
+    })
+    .catch(() => {
+      document.getElementById('cameraStatus').textContent = 'CAMERA ACCESS DENIED';
+    });
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('cameraFeed');
+  video.srcObject = null;
+  document.getElementById('cameraWrap').classList.remove('active');
+  document.getElementById('cameraStatus').textContent = 'AWAITING FEED';
+  document.getElementById('startCameraBtn').style.display = 'inline-flex';
+  document.getElementById('stopCameraBtn').style.display  = 'none';
+}
+
+/* ── Microphone (Voice tab) ── */
+let micStream = null;
+let micAnalyser = null;
+let micAnimFrame = null;
+let micTimerInterval = null;
+let micSeconds = 0;
+
+function startMic() {
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      micStream = stream;
+      micSeconds = 0;
+
+      // Web Audio visualiser
+      const ctx     = new (window.AudioContext || window.webkitAudioContext)();
+      const source  = ctx.createMediaStreamSource(stream);
+      micAnalyser   = ctx.createAnalyser();
+      micAnalyser.fftSize = 32;
+      source.connect(micAnalyser);
+
+      const bars    = document.querySelectorAll('.mic-bar');
+      const dataArr = new Uint8Array(micAnalyser.frequencyBinCount);
+
+      function drawBars() {
+        micAnimFrame = requestAnimationFrame(drawBars);
+        micAnalyser.getByteFrequencyData(dataArr);
+        bars.forEach((bar, i) => {
+          const val = dataArr[i] || 0;
+          bar.style.height = Math.max(8, (val / 255) * 100) + '%';
+        });
+      }
+      drawBars();
+
+      // Timer
+      micTimerInterval = setInterval(() => {
+        micSeconds++;
+        const m = String(Math.floor(micSeconds / 60)).padStart(2,'0');
+        const s = String(micSeconds % 60).padStart(2,'0');
+        document.getElementById('micTimer').textContent = m + ':' + s;
+      }, 1000);
+
+      document.getElementById('micWrap').classList.add('recording');
+      document.getElementById('micStatus').textContent = 'RECORDING — AWAITING MODEL';
+      document.getElementById('startMicBtn').style.display = 'none';
+      document.getElementById('stopMicBtn').style.display  = 'inline-flex';
+    })
+    .catch(() => {
+      document.getElementById('micStatus').textContent = 'MICROPHONE ACCESS DENIED';
+    });
+}
+
+function stopMic() {
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
+  if (micTimerInterval) { clearInterval(micTimerInterval); micTimerInterval = null; }
+
+  // Reset bars to idle state
+  document.querySelectorAll('.mic-bar').forEach((bar, i) => {
+    const idle = [20,40,60,80,100,80,60,40,20];
+    bar.style.height = idle[i] + '%';
+  });
+
+  document.getElementById('micWrap').classList.remove('recording');
+  document.getElementById('micStatus').textContent  = 'READY TO RECORD';
+  document.getElementById('micTimer').textContent   = '00:00';
+  document.getElementById('startMicBtn').style.display = 'inline-flex';
+  document.getElementById('stopMicBtn').style.display  = 'none';
+}
