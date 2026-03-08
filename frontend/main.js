@@ -381,9 +381,9 @@ document.querySelectorAll('.bio-tab').forEach(tab => {
       scrollTrigger: {
         trigger: hs1,
         start: 'top top',
-        end: '+=200vh',
+        end: '+=300vh',
         pin: true,
-        scrub: 3,
+        scrub: 1,
         anticipatePin: 1,
         onUpdate: self => {
           const inPanel2 = self.progress >= 0.5;
