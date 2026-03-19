@@ -17,7 +17,13 @@ from utils.database import save_prediction, get_stats as db_get_stats, get_recen
 from utils.auth import register_user, login_user, setup_jwt, hash_password
 
 app  = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:5000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 Talisman(app,
     force_https=False,
