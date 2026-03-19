@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import joblib, os, sys, datetime
 import numpy as np
 
@@ -13,6 +15,14 @@ from utils.fusion import fuse_risk_scores
 app  = Flask(__name__)
 CORS(app)
 
+# Rate Limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
 model = joblib.load('model/risk_model.pkl')
 tfidf = joblib.load('model/tfidf_vectorizer.pkl')
 
@@ -20,16 +30,18 @@ prediction_log = []
 
 
 @app.route('/api/health', methods=['GET'])
+@limiter.limit("60 per minute")
 def health():
     return jsonify({
         "status":    "running",
         "service":   "Self Harm Detection API",
-        "accuracy":  "91.8%",
+        "accuracy":  "92.2%",
         "timestamp": datetime.datetime.now().isoformat()
     })
 
 
 @app.route('/api/predict', methods=['POST'])
+@limiter.limit("30 per minute")
 def predict():
     data = request.get_json()
 
@@ -39,6 +51,9 @@ def predict():
     text = str(data['text']).strip()
     if not text:
         return jsonify({"error": "text cannot be empty"}), 400
+
+    if len(text) > 5000:
+        return jsonify({"error": "text too long. Maximum 5000 characters"}), 400
 
     cleaned   = full_preprocess(text)
     scores    = get_sentiment_scores(text)
@@ -84,6 +99,7 @@ def predict():
 
 
 @app.route('/api/stats', methods=['GET'])
+@limiter.limit("30 per minute")
 def stats():
     if not prediction_log:
         return jsonify({"message": "No predictions yet"})
@@ -100,12 +116,14 @@ def stats():
 
 
 @app.route('/api/monitor', methods=['GET'])
+@limiter.limit("30 per minute")
 def monitor():
     report = get_monitoring_report()
     return jsonify(report)
 
 
 @app.route('/api/analyze-face', methods=['POST'])
+@limiter.limit("20 per minute")
 def analyze_face():
     data = request.get_json()
 
@@ -124,6 +142,7 @@ def analyze_face():
 
 
 @app.route('/api/analyze-speech', methods=['POST'])
+@limiter.limit("20 per minute")
 def analyze_speech():
     data = request.get_json()
 
@@ -136,6 +155,8 @@ def analyze_speech():
 
     if data.get('use_microphone'):
         duration = int(data.get('duration', 5))
+        if duration > 30:
+            return jsonify({"error": "Maximum duration is 30 seconds"}), 400
         result   = record_from_microphone(duration)
         return jsonify(result), 200
 
@@ -143,6 +164,7 @@ def analyze_speech():
 
 
 @app.route('/api/predict-multimodal', methods=['POST'])
+@limiter.limit("10 per minute")
 def predict_multimodal():
     data = request.get_json()
 
@@ -156,6 +178,8 @@ def predict_multimodal():
     # Text analysis
     if 'text' in data:
         text = str(data['text']).strip()
+        if len(text) > 5000:
+            return jsonify({"error": "text too long. Maximum 5000 characters"}), 400
         cleaned   = full_preprocess(text)
         scores    = get_sentiment_scores(text)
         sentiment = scores['compound']
@@ -197,17 +221,36 @@ def predict_multimodal():
     return jsonify(final_result), 200
 
 
+# Error handlers
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded",
+        "message": str(e.description),
+        "retry_after": "Please wait before making another request"
+    }), 429
+
+
+@app.errorhandler(400)
+def bad_request_handler(e):
+    return jsonify({
+        "error": "Bad request",
+        "message": str(e)
+    }), 400
+
+
 if __name__ == '__main__':
     print("="*50)
     print("  Self Harm Detection API - Running")
     print("  Accuracy: 92.2%")
+    print("  Rate Limiting: ENABLED")
     print("  Endpoints:")
     print("    GET  /api/health")
-    print("    POST /api/predict")
-    print("    GET  /api/stats")
-    print("    GET  /api/monitor")
-    print("    POST /api/analyze-face")
-    print("    POST /api/analyze-speech")
-    print("    POST /api/predict-multimodal")
+    print("    POST /api/predict        [30/min]")
+    print("    GET  /api/stats          [30/min]")
+    print("    GET  /api/monitor        [30/min]")
+    print("    POST /api/analyze-face   [20/min]")
+    print("    POST /api/analyze-speech [20/min]")
+    print("    POST /api/predict-multimodal [10/min]")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
