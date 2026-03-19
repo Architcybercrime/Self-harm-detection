@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_talisman import Talisman
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -15,6 +16,12 @@ from utils.database import save_prediction, get_stats as db_get_stats, get_recen
 
 app  = Flask(__name__)
 CORS(app)
+
+Talisman(app,
+    force_https=False,
+    strict_transport_security=False,
+    content_security_policy=False
+)
 
 limiter = Limiter(
     app=app,
