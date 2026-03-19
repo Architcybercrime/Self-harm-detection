@@ -278,10 +278,13 @@ def predict_multimodal():
             return jsonify({"error": errors[0]}), 400
         speech_result = record_from_microphone(duration)
 
+    # Support dynamic weight adjustment
+    custom_weights = data.get('weights', None)
     final_result = fuse_risk_scores(
         text_result=text_result,
         face_result=face_result,
-        speech_result=speech_result
+        speech_result=speech_result,
+        custom_weights=custom_weights
     )
 
     if 'risk_level' in final_result:
@@ -355,6 +358,7 @@ if __name__ == '__main__':
     print("  Database: Supabase PostgreSQL")
     print("  Auth: JWT ENABLED")
     print("  Validation: ENABLED")
+    print("  Dynamic Weights: ENABLED")
     print("  Endpoints:")
     print("    GET  /api/health")
     print("    POST /api/register")
