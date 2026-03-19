@@ -141,3 +141,74 @@ def test_fusion_no_input():
 
     result = fuse_risk_scores()
     assert 'error' in result
+
+
+# ── AUTH ENDPOINTS ───────────────────────────────────
+def test_register_success(client):
+    """Test successful user registration."""
+    response = client.post('/api/register',
+        json={"username": "testuser123", "password": "password123"})
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data['success'] == True
+
+
+def test_register_duplicate(client):
+    """Test duplicate username registration fails."""
+    client.post('/api/register',
+        json={"username": "dupuser", "password": "password123"})
+    response = client.post('/api/register',
+        json={"username": "dupuser", "password": "password123"})
+    assert response.status_code == 400
+
+
+def test_register_short_username(client):
+    """Test registration fails with short username."""
+    response = client.post('/api/register',
+        json={"username": "ab", "password": "password123"})
+    assert response.status_code == 400
+
+
+def test_register_short_password(client):
+    """Test registration fails with short password."""
+    response = client.post('/api/register',
+        json={"username": "validuser", "password": "123"})
+    assert response.status_code == 400
+
+
+def test_login_nonexistent_user_returns_401(client):
+    """Test login fails for nonexistent user returns 401."""
+    response = client.post('/api/login',
+        json={"username": "doesnotexist999", "password": "password123"})
+    assert response.status_code == 401
+    data = response.get_json()
+    assert data['success'] == False
+
+
+def test_login_missing_fields(client):
+    """Test login fails when fields are missing."""
+    response = client.post('/api/login', json={})
+    assert response.status_code == 400
+
+
+# ── VALIDATORS ───────────────────────────────────────
+def test_validate_text_too_short(client):
+    """Test prediction fails with too short text."""
+    response = client.post('/api/predict',
+        json={"text": "hi"})
+    assert response.status_code == 400
+
+
+def test_validate_special_characters(client):
+    """Test prediction works with special characters."""
+    response = client.post('/api/predict',
+        json={"text": "I feel very sad and hopeless today!!!"})
+    assert response.status_code == 200
+
+
+def test_db_stats_structure(client):
+    """Test db-stats returns correct structure."""
+    response = client.get('/api/db-stats')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'success' in data

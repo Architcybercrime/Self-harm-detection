@@ -89,5 +89,89 @@
     "risk_level": "LOW",
     "confidence": 0.8812,
     "sentiment": 0.8622
+  },
+  {
+    "timestamp": "2026-03-19T13:39:38.904037",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.9253,
+    "sentiment": -0.5617
+  },
+  {
+    "timestamp": "2026-03-19T13:39:40.421135",
+    "text_length": 8,
+    "risk_level": "LOW",
+    "confidence": 0.8812,
+    "sentiment": 0.8622
+  },
+  {
+    "timestamp": "2026-03-19T13:39:41.978419",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.5359,
+    "sentiment": -0.8192
+  },
+  {
+    "timestamp": "2026-03-19T13:41:47.252553",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.9253,
+    "sentiment": -0.5617
+  },
+  {
+    "timestamp": "2026-03-19T13:41:48.251332",
+    "text_length": 8,
+    "risk_level": "LOW",
+    "confidence": 0.8812,
+    "sentiment": 0.8622
+  },
+  {
+    "timestamp": "2026-03-19T13:41:49.809069",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.5359,
+    "sentiment": -0.8192
+  },
+  {
+    "timestamp": "2026-03-19T13:45:17.564079",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.9253,
+    "sentiment": -0.5617
+  },
+  {
+    "timestamp": "2026-03-19T13:45:19.111389",
+    "text_length": 8,
+    "risk_level": "LOW",
+    "confidence": 0.8812,
+    "sentiment": 0.8622
+  },
+  {
+    "timestamp": "2026-03-19T13:45:20.953465",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.5359,
+    "sentiment": -0.8192
+  },
+  {
+    "timestamp": "2026-03-19T13:46:51.313132",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.9253,
+    "sentiment": -0.5617
+  },
+  {
+    "timestamp": "2026-03-19T13:46:52.457787",
+    "text_length": 8,
+    "risk_level": "LOW",
+    "confidence": 0.8812,
+    "sentiment": 0.8622
+  },
+  {
+    "timestamp": "2026-03-19T13:46:54.054089",
+    "text_length": 7,
+    "risk_level": "HIGH",
+    "confidence": 0.5359,
+    "sentiment": -0.8192
   }
 ]
