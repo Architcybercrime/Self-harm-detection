@@ -3,6 +3,7 @@ from flask_talisman import Talisman
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import joblib, os, sys, datetime
 import numpy as np
 
@@ -13,6 +14,7 @@ from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
 from utils.speech_analysis import analyze_audio_file, record_from_microphone
 from utils.fusion import fuse_risk_scores
 from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
+from utils.auth import register_user, login_user, setup_jwt, hash_password
 
 app  = Flask(__name__)
 CORS(app)
@@ -30,6 +32,8 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+jwt = setup_jwt(app)
+
 model = joblib.load('model/risk_model.pkl')
 tfidf = joblib.load('model/tfidf_vectorizer.pkl')
 
@@ -40,12 +44,47 @@ prediction_log = []
 @limiter.limit("60 per minute")
 def health():
     return jsonify({
-        "status":    "running",
-        "service":   "Self Harm Detection API",
-        "accuracy":  "92.2%",
-        "database":  "Supabase PostgreSQL",
-        "timestamp": datetime.datetime.now().isoformat()
+        "status":        "running",
+        "service":       "Self Harm Detection API",
+        "accuracy":      "92.2%",
+        "database":      "Supabase PostgreSQL",
+        "auth":          "JWT enabled",
+        "timestamp":     datetime.datetime.now().isoformat()
     })
+
+
+@app.route('/api/register', methods=['POST'])
+@limiter.limit("5 per minute")
+def register():
+    data = request.get_json()
+    if not data or 'username' not in data or 'password' not in data:
+        return jsonify({"error": "username and password required"}), 400
+
+    username = str(data['username']).strip()
+    password = str(data['password']).strip()
+
+    if len(username) < 3:
+        return jsonify({"error": "Username must be at least 3 characters"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
+
+    result = register_user(username, password)
+    if result['success']:
+        return jsonify(result), 201
+    return jsonify(result), 400
+
+
+@app.route('/api/login', methods=['POST'])
+@limiter.limit("10 per minute")
+def login():
+    data = request.get_json()
+    if not data or 'username' not in data or 'password' not in data:
+        return jsonify({"error": "username and password required"}), 400
+
+    result = login_user(data['username'], data['password'])
+    if result['success']:
+        return jsonify(result), 200
+    return jsonify(result), 401
 
 
 @app.route('/api/predict', methods=['POST'])
@@ -97,7 +136,6 @@ def predict():
         sentiment_score=round(sentiment, 4)
     )
 
-    # Save to Supabase
     save_prediction(
         text_input  = text,
         risk_level  = risk_level,
@@ -232,7 +270,6 @@ def predict_multimodal():
             "multimodal": True
         })
 
-        # Save to Supabase
         save_prediction(
             text_input  = text,
             risk_level  = final_result['risk_level'],
@@ -259,6 +296,18 @@ def db_stats():
     return jsonify(result), 200
 
 
+@app.route('/api/profile', methods=['GET'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def profile():
+    current_user = get_jwt_identity()
+    return jsonify({
+        "username": current_user,
+        "message":  f"Welcome {current_user}!",
+        "role":     "user"
+    }), 200
+
+
 @app.errorhandler(429)
 def ratelimit_handler(e):
     return jsonify({
@@ -282,8 +331,12 @@ if __name__ == '__main__':
     print("  Accuracy: 92.2%")
     print("  Rate Limiting: ENABLED")
     print("  Database: Supabase PostgreSQL")
+    print("  Auth: JWT ENABLED")
     print("  Endpoints:")
     print("    GET  /api/health")
+    print("    POST /api/register")
+    print("    POST /api/login")
+    print("    GET  /api/profile      [JWT]")
     print("    POST /api/predict        [30/min]")
     print("    GET  /api/stats          [30/min]")
     print("    GET  /api/monitor        [30/min]")
