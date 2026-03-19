@@ -14,7 +14,8 @@ from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
 from utils.speech_analysis import analyze_audio_file, record_from_microphone
 from utils.fusion import fuse_risk_scores
 from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
-from utils.auth import register_user, login_user, setup_jwt, hash_password
+from utils.auth import register_user, login_user, setup_jwt
+from utils.validators import validate_text_input, validate_credentials, sanitize_text, validate_audio_duration
 
 app  = Flask(__name__)
 CORS(app, resources={
@@ -50,12 +51,12 @@ prediction_log = []
 @limiter.limit("60 per minute")
 def health():
     return jsonify({
-        "status":        "running",
-        "service":       "Self Harm Detection API",
-        "accuracy":      "92.2%",
-        "database":      "Supabase PostgreSQL",
-        "auth":          "JWT enabled",
-        "timestamp":     datetime.datetime.now().isoformat()
+        "status":    "running",
+        "service":   "Self Harm Detection API",
+        "accuracy":  "92.2%",
+        "database":  "Supabase PostgreSQL",
+        "auth":      "JWT enabled",
+        "timestamp": datetime.datetime.now().isoformat()
     })
 
 
@@ -66,13 +67,12 @@ def register():
     if not data or 'username' not in data or 'password' not in data:
         return jsonify({"error": "username and password required"}), 400
 
-    username = str(data['username']).strip()
+    username = sanitize_text(str(data['username']))
     password = str(data['password']).strip()
 
-    if len(username) < 3:
-        return jsonify({"error": "Username must be at least 3 characters"}), 400
-    if len(password) < 6:
-        return jsonify({"error": "Password must be at least 6 characters"}), 400
+    is_valid, errors = validate_credentials(username, password)
+    if not is_valid:
+        return jsonify({"error": errors[0]}), 400
 
     result = register_user(username, password)
     if result['success']:
@@ -101,12 +101,10 @@ def predict():
     if not data or 'text' not in data:
         return jsonify({"error": "text field is required"}), 400
 
-    text = str(data['text']).strip()
-    if not text:
-        return jsonify({"error": "text cannot be empty"}), 400
-
-    if len(text) > 5000:
-        return jsonify({"error": "text too long. Maximum 5000 characters"}), 400
+    text = sanitize_text(str(data['text']))
+    is_valid, errors = validate_text_input(text)
+    if not is_valid:
+        return jsonify({"error": errors[0]}), 400
 
     cleaned   = full_preprocess(text)
     scores    = get_sentiment_scores(text)
@@ -216,10 +214,10 @@ def analyze_speech():
         return jsonify(result), 200
 
     if data.get('use_microphone'):
-        duration = int(data.get('duration', 5))
-        if duration > 30:
-            return jsonify({"error": "Maximum duration is 30 seconds"}), 400
-        result   = record_from_microphone(duration)
+        is_valid, errors, duration = validate_audio_duration(data.get('duration', 5))
+        if not is_valid:
+            return jsonify({"error": errors[0]}), 400
+        result = record_from_microphone(duration)
         return jsonify(result), 200
 
     return jsonify({"error": "Provide audio_path or use_microphone:true"}), 400
@@ -239,9 +237,10 @@ def predict_multimodal():
     text          = ""
 
     if 'text' in data:
-        text = str(data['text']).strip()
-        if len(text) > 5000:
-            return jsonify({"error": "text too long. Maximum 5000 characters"}), 400
+        text = sanitize_text(str(data['text']))
+        is_valid, errors = validate_text_input(text)
+        if not is_valid:
+            return jsonify({"error": errors[0]}), 400
         cleaned   = full_preprocess(text)
         scores    = get_sentiment_scores(text)
         sentiment = scores['compound']
@@ -259,7 +258,9 @@ def predict_multimodal():
         face_result = capture_webcam_frame()
 
     if data.get('use_microphone'):
-        duration      = int(data.get('duration', 5))
+        is_valid, errors, duration = validate_audio_duration(data.get('duration', 5))
+        if not is_valid:
+            return jsonify({"error": errors[0]}), 400
         speech_result = record_from_microphone(duration)
 
     final_result = fuse_risk_scores(
@@ -338,6 +339,7 @@ if __name__ == '__main__':
     print("  Rate Limiting: ENABLED")
     print("  Database: Supabase PostgreSQL")
     print("  Auth: JWT ENABLED")
+    print("  Validation: ENABLED")
     print("  Endpoints:")
     print("    GET  /api/health")
     print("    POST /api/register")
