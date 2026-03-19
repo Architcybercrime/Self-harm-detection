@@ -7,6 +7,7 @@ warnings.filterwarnings('ignore')
 
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
 from flask import Flask, request, jsonify
 from flask_talisman import Talisman
 from flask_cors import CORS
@@ -14,7 +15,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_socketio import SocketIO, emit
-import joblib, os, sys, datetime
+import joblib, sys, datetime
 import numpy as np
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -351,7 +352,6 @@ def predict_multimodal():
             alert       = final_result['alert_triggered']
         )
 
-        # Real-time WebSocket alert for multimodal
         if final_result['alert_triggered']:
             socketio.emit('high_risk_alert', {
                 "risk_level":  final_result['risk_level'],
@@ -392,11 +392,11 @@ def profile():
     }), 200
 
 
+# ── ERROR HANDLERS ───────────────────────────────────
 @app.errorhandler(429)
 def ratelimit_handler(e):
     return jsonify({
         "error":       "Rate limit exceeded",
-        "message":     str(e.description),
         "retry_after": "Please wait before making another request"
     }), 429
 
@@ -404,9 +404,29 @@ def ratelimit_handler(e):
 @app.errorhandler(400)
 def bad_request_handler(e):
     return jsonify({
-        "error":   "Bad request",
-        "message": str(e)
+        "error": "Bad request"
     }), 400
+
+
+@app.errorhandler(401)
+def unauthorized_handler(e):
+    return jsonify({
+        "error": "Unauthorized - valid JWT token required"
+    }), 401
+
+
+@app.errorhandler(404)
+def not_found_handler(e):
+    return jsonify({
+        "error": "Endpoint not found"
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error_handler(e):
+    return jsonify({
+        "error": "Internal server error"
+    }), 500
 
 
 if __name__ == '__main__':
@@ -419,6 +439,7 @@ if __name__ == '__main__':
     print("  Validation: ENABLED")
     print("  Dynamic Weights: ENABLED")
     print("  WebSocket: ENABLED - Real-time alerts")
+    print("  Security: HARDENED")
     print("  Endpoints:")
     print("    GET  /api/health         [public]")
     print("    POST /api/register       [public]")
