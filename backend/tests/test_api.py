@@ -212,3 +212,22 @@ def test_db_stats_structure(client):
     assert response.status_code == 200
     data = response.get_json()
     assert 'success' in data
+
+
+    # ── SPEECH ANALYSIS ──────────────────────────────────
+def test_speech_endpoint_no_input(client):
+    """Test speech endpoint returns error with no input."""
+    response = client.post('/api/analyze-speech', json={})
+    assert response.status_code == 400
+
+def test_speech_endpoint_invalid_duration(client):
+    """Test speech endpoint rejects invalid duration."""
+    response = client.post('/api/analyze-speech',
+        json={"use_microphone": True, "duration": 100})
+    assert response.status_code == 400
+
+def test_speech_analysis_module():
+    """Test speech analysis module loads correctly."""
+    from utils.speech_analysis import LIBROSA_AVAILABLE, SR_AVAILABLE
+    assert LIBROSA_AVAILABLE == True
+    assert SR_AVAILABLE == True
