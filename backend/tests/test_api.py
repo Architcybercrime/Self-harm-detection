@@ -7,6 +7,7 @@ Using pytest framework
 import pytest
 import sys
 import os
+import time
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -43,6 +44,7 @@ def test_health_endpoint(client):
     data = response.get_json()
     assert data['status'] == 'running'
     assert data['accuracy'] == '92.2%'
+    assert data['websocket'] == 'enabled'
 
 
 # ── PREDICT ENDPOINT ─────────────────────────────────
@@ -200,9 +202,10 @@ def test_fusion_invalid_weights():
 
 # ── AUTH ENDPOINTS ───────────────────────────────────
 def test_register_success(client):
-    """Test successful user registration."""
+    """Test successful user registration with unique username."""
+    unique_user = f"testuser_{int(time.time())}"
     response = client.post('/api/register',
-        json={"username": "testuser123", "password": "password123"})
+        json={"username": unique_user, "password": "password123"})
     assert response.status_code == 201
     data = response.get_json()
     assert data['success'] == True
