@@ -11,11 +11,11 @@ from utils.monitor import log_prediction, get_monitoring_report
 from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
 from utils.speech_analysis import analyze_audio_file, record_from_microphone
 from utils.fusion import fuse_risk_scores
+from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
 
 app  = Flask(__name__)
 CORS(app)
 
-# Rate Limiter
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -36,6 +36,7 @@ def health():
         "status":    "running",
         "service":   "Self Harm Detection API",
         "accuracy":  "92.2%",
+        "database":  "Supabase PostgreSQL",
         "timestamp": datetime.datetime.now().isoformat()
     })
 
@@ -87,6 +88,16 @@ def predict():
         risk_level=risk_level,
         confidence=confidence,
         sentiment_score=round(sentiment, 4)
+    )
+
+    # Save to Supabase
+    save_prediction(
+        text_input  = text,
+        risk_level  = risk_level,
+        confidence  = confidence,
+        sentiment   = round(sentiment, 4),
+        modality    = "text",
+        alert       = alert
     )
 
     return jsonify({
@@ -174,8 +185,8 @@ def predict_multimodal():
     text_result   = None
     face_result   = None
     speech_result = None
+    text          = ""
 
-    # Text analysis
     if 'text' in data:
         text = str(data['text']).strip()
         if len(text) > 5000:
@@ -193,23 +204,19 @@ def predict_multimodal():
             "confidence": round(float(max(probability)), 4)
         }
 
-    # Facial analysis
     if data.get('use_webcam'):
         face_result = capture_webcam_frame()
 
-    # Speech analysis
     if data.get('use_microphone'):
         duration      = int(data.get('duration', 5))
         speech_result = record_from_microphone(duration)
 
-    # Fuse all scores
     final_result = fuse_risk_scores(
         text_result=text_result,
         face_result=face_result,
         speech_result=speech_result
     )
 
-    # Log the prediction
     if 'risk_level' in final_result:
         prediction_log.append({
             "timestamp":  datetime.datetime.now().isoformat(),
@@ -218,15 +225,38 @@ def predict_multimodal():
             "multimodal": True
         })
 
+        # Save to Supabase
+        save_prediction(
+            text_input  = text,
+            risk_level  = final_result['risk_level'],
+            confidence  = final_result['final_risk_score'],
+            sentiment   = 0.0,
+            modality    = "multimodal",
+            alert       = final_result['alert_triggered']
+        )
+
     return jsonify(final_result), 200
 
 
-# Error handlers
+@app.route('/api/history', methods=['GET'])
+@limiter.limit("30 per minute")
+def history():
+    result = get_recent_predictions(20)
+    return jsonify(result), 200
+
+
+@app.route('/api/db-stats', methods=['GET'])
+@limiter.limit("30 per minute")
+def db_stats():
+    result = db_get_stats()
+    return jsonify(result), 200
+
+
 @app.errorhandler(429)
 def ratelimit_handler(e):
     return jsonify({
-        "error": "Rate limit exceeded",
-        "message": str(e.description),
+        "error":       "Rate limit exceeded",
+        "message":     str(e.description),
         "retry_after": "Please wait before making another request"
     }), 429
 
@@ -234,7 +264,7 @@ def ratelimit_handler(e):
 @app.errorhandler(400)
 def bad_request_handler(e):
     return jsonify({
-        "error": "Bad request",
+        "error":   "Bad request",
         "message": str(e)
     }), 400
 
@@ -244,6 +274,7 @@ if __name__ == '__main__':
     print("  Self Harm Detection API - Running")
     print("  Accuracy: 92.2%")
     print("  Rate Limiting: ENABLED")
+    print("  Database: Supabase PostgreSQL")
     print("  Endpoints:")
     print("    GET  /api/health")
     print("    POST /api/predict        [30/min]")
@@ -252,5 +283,7 @@ if __name__ == '__main__':
     print("    POST /api/analyze-face   [20/min]")
     print("    POST /api/analyze-speech [20/min]")
     print("    POST /api/predict-multimodal [10/min]")
+    print("    GET  /api/history        [30/min]")
+    print("    GET  /api/db-stats       [30/min]")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
