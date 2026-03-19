@@ -94,6 +94,7 @@ def login():
 
 
 @app.route('/api/predict', methods=['POST'])
+@jwt_required()
 @limiter.limit("30 per minute")
 def predict():
     data = request.get_json()
@@ -174,6 +175,7 @@ def predict():
 
 
 @app.route('/api/stats', methods=['GET'])
+@jwt_required()
 @limiter.limit("30 per minute")
 def stats():
     if not prediction_log:
@@ -191,6 +193,7 @@ def stats():
 
 
 @app.route('/api/monitor', methods=['GET'])
+@jwt_required()
 @limiter.limit("30 per minute")
 def monitor():
     report = get_monitoring_report()
@@ -198,6 +201,7 @@ def monitor():
 
 
 @app.route('/api/analyze-face', methods=['POST'])
+@jwt_required()
 @limiter.limit("20 per minute")
 def analyze_face():
     data = request.get_json()
@@ -217,6 +221,7 @@ def analyze_face():
 
 
 @app.route('/api/analyze-speech', methods=['POST'])
+@jwt_required()
 @limiter.limit("20 per minute")
 def analyze_speech():
     data = request.get_json()
@@ -239,6 +244,7 @@ def analyze_speech():
 
 
 @app.route('/api/predict-multimodal', methods=['POST'])
+@jwt_required()
 @limiter.limit("10 per minute")
 def predict_multimodal():
     data = request.get_json()
@@ -278,7 +284,6 @@ def predict_multimodal():
             return jsonify({"error": errors[0]}), 400
         speech_result = record_from_microphone(duration)
 
-    # Support dynamic weight adjustment
     custom_weights = data.get('weights', None)
     final_result = fuse_risk_scores(
         text_result=text_result,
@@ -308,6 +313,7 @@ def predict_multimodal():
 
 
 @app.route('/api/history', methods=['GET'])
+@jwt_required()
 @limiter.limit("30 per minute")
 def history():
     result = get_recent_predictions(20)
@@ -315,6 +321,7 @@ def history():
 
 
 @app.route('/api/db-stats', methods=['GET'])
+@jwt_required()
 @limiter.limit("30 per minute")
 def db_stats():
     result = db_get_stats()
@@ -356,21 +363,21 @@ if __name__ == '__main__':
     print("  Accuracy: 92.2%")
     print("  Rate Limiting: ENABLED")
     print("  Database: Supabase PostgreSQL")
-    print("  Auth: JWT ENABLED")
+    print("  Auth: JWT ENABLED - All endpoints protected")
     print("  Validation: ENABLED")
     print("  Dynamic Weights: ENABLED")
     print("  Endpoints:")
-    print("    GET  /api/health")
-    print("    POST /api/register")
-    print("    POST /api/login")
-    print("    GET  /api/profile      [JWT]")
-    print("    POST /api/predict        [30/min]")
-    print("    GET  /api/stats          [30/min]")
-    print("    GET  /api/monitor        [30/min]")
-    print("    POST /api/analyze-face   [20/min]")
-    print("    POST /api/analyze-speech [20/min]")
-    print("    POST /api/predict-multimodal [10/min]")
-    print("    GET  /api/history        [30/min]")
-    print("    GET  /api/db-stats       [30/min]")
+    print("    GET  /api/health         [public]")
+    print("    POST /api/register       [public]")
+    print("    POST /api/login          [public]")
+    print("    GET  /api/profile        [JWT]")
+    print("    POST /api/predict        [JWT]")
+    print("    GET  /api/stats          [JWT]")
+    print("    GET  /api/monitor        [JWT]")
+    print("    POST /api/analyze-face   [JWT]")
+    print("    POST /api/analyze-speech [JWT]")
+    print("    POST /api/predict-multimodal [JWT]")
+    print("    GET  /api/history        [JWT]")
+    print("    GET  /api/db-stats       [JWT]")
     print("="*50)
     app.run(debug=True, host='0.0.0.0', port=5000)
