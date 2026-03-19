@@ -150,11 +150,26 @@ def predict():
     )
 
     return jsonify({
-        "risk_level":      risk_level,
-        "confidence":      confidence,
-        "alert_triggered": alert,
-        "sentiment_score": round(sentiment, 4),
-        "message":         message
+        "risk_level":        risk_level,
+        "confidence":        confidence,
+        "alert_triggered":   alert,
+        "sentiment_score":   round(sentiment, 4),
+        "message":           message,
+        "risk_indicators": {
+            "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
+            "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
+            "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
+        },
+        "recommendations": {
+            "immediate_action":  alert,
+            "support_resources": [
+                "iCall: 9152987821",
+                "Vandrevala Foundation: 1860-2662-345",
+                "AASRA: 9820466627"
+            ] if alert else [],
+            "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
+        },
+        "analysis_timestamp": datetime.datetime.now().isoformat()
     }), 200
 
 

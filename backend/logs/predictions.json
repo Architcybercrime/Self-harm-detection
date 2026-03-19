@@ -173,5 +173,12 @@
     "risk_level": "HIGH",
     "confidence": 0.5359,
     "sentiment": -0.8192
+  },
+  {
+    "timestamp": "2026-03-19T13:58:16.772361",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.9253,
+    "sentiment": -0.5617
   }
 ]
