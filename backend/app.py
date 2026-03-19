@@ -1,3 +1,14 @@
+# ── SECURITY CONFIGURATION ───────────────────────────
+# SQL Injection Prevention: Using Supabase ORM (no raw SQL queries)
+# XSS Prevention: Flask-Talisman security headers + input sanitization
+# CSRF Protection: JWT tokens prevent CSRF attacks (stateless auth)
+# Password Hashing: bcrypt with salt rounds
+# Rate Limiting: flask-limiter on all endpoints
+# Authentication: JWT Bearer tokens required
+# Authorization: @jwt_required() on all protected endpoints
+# Input Validation: validators.py sanitizes all inputs
+# CORS: Restricted to specific origins
+# Security Headers: X-Frame-Options, X-Content-Type-Options, Referrer-Policy
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
