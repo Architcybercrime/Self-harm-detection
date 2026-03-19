@@ -33,7 +33,7 @@ Self-harm-detection/
 │   │   └── train_model.py      ← ML model training
 │   ├── utils/
 │   │   ├── preprocess.py       ← Text preprocessing
-│   │   ├── facial_analysis.py  ← DeepFace emotion detection
+│   │   ├── facial_analysis.py  ← DeepFace real-time webcam detection
 │   │   ├── speech_analysis.py  ← Librosa audio analysis
 │   │   ├── fusion.py           ← Multimodal risk fusion
 │   │   ├── monitor.py          ← Drift detection
@@ -66,8 +66,8 @@ Self-harm-detection/
 | Backend API | Python, Flask |
 | Machine Learning | Scikit-learn, NLTK |
 | Text Analysis | TF-IDF, VADER Sentiment |
-| Facial Analysis | DeepFace, OpenCV |
-| Speech Analysis | Librosa, SpeechRecognition |
+| Facial Analysis | DeepFace, OpenCV (Real-time webcam) |
+| Speech Analysis | Librosa, SpeechRecognition, PyAudio |
 | Data Processing | Pandas, NumPy |
 | Database | Supabase PostgreSQL |
 | Authentication | JWT + Bcrypt |
@@ -104,30 +104,89 @@ Self-harm-detection/
 | POST | `/api/login` | Login and get JWT token |
 | GET | `/api/profile` | Get user profile [JWT] |
 | POST | `/api/predict` | Predict risk from text |
-| POST | `/api/analyze-face` | Webcam emotion analysis |
-| POST | `/api/analyze-speech` | Microphone speech analysis |
-| POST | `/api/predict-multimodal` | Combined risk prediction |
+| POST | `/api/analyze-face` | Real-time webcam emotion analysis |
+| POST | `/api/analyze-speech` | Live microphone speech analysis |
+| POST | `/api/predict-multimodal` | Combined text+face+speech prediction |
 | GET | `/api/stats` | Session statistics |
 | GET | `/api/monitor` | Drift detection report |
 | GET | `/api/history` | Prediction history from DB |
 | GET | `/api/db-stats` | Database statistics |
 
-### Sample Request
+---
+
+## 🎯 Sample API Usage
+
+### Text Prediction
 ```json
 POST /api/predict
 {
   "text": "I feel completely hopeless and nobody cares"
 }
 ```
-
-### Sample Response
+**Response:**
 ```json
 {
   "alert_triggered": true,
   "confidence": 0.894,
-  "message": "High risk indicators detected.",
   "risk_level": "HIGH",
-  "sentiment_score": -0.5574
+  "sentiment_score": -0.5574,
+  "risk_indicators": {
+    "text_sentiment": "negative",
+    "confidence_level": "high",
+    "severity": "high"
+  },
+  "recommendations": {
+    "support_resources": [
+      "iCall: 9152987821",
+      "Vandrevala Foundation: 1860-2662-345",
+      "AASRA: 9820466627"
+    ]
+  }
+}
+```
+
+### Real-time Webcam Analysis ✅ WORKING
+```json
+POST /api/analyze-face
+{
+  "use_webcam": true
+}
+```
+**Response:**
+```json
+{
+  "dominant_emotion": "neutral",
+  "emotions": {
+    "angry": 3.36,
+    "disgust": 0.0,
+    "fear": 0.23,
+    "happy": 0.84,
+    "neutral": 88.16,
+    "sad": 7.39,
+    "surprise": 0.02
+  },
+  "facial_risk_score": 0.1342,
+  "risk_level": "LOW"
+}
+```
+
+### Live Microphone Analysis ✅ WORKING
+```json
+POST /api/analyze-speech
+{
+  "use_microphone": true,
+  "duration": 5
+}
+```
+
+### Multimodal Analysis (Text + Webcam + Mic) ✅ WORKING
+```json
+POST /api/predict-multimodal
+{
+  "text": "I feel hopeless",
+  "use_webcam": true,
+  "use_microphone": true,
+  "duration": 5
 }
 ```
 
