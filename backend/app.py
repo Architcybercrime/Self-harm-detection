@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_socketio import SocketIO, emit
 import joblib, os, sys, datetime
 import numpy as np
 
@@ -39,7 +40,8 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-jwt = setup_jwt(app)
+jwt      = setup_jwt(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 model = joblib.load('model/risk_model.pkl')
 tfidf = joblib.load('model/tfidf_vectorizer.pkl')
@@ -47,6 +49,26 @@ tfidf = joblib.load('model/tfidf_vectorizer.pkl')
 prediction_log = []
 
 
+# ── WEBSOCKET EVENTS ─────────────────────────────────
+@socketio.on('connect')
+def handle_connect():
+    emit('connected', {
+        "message": "Connected to Self Harm Detection API",
+        "service": "Real-time alerts enabled"
+    })
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected from WebSocket')
+
+
+@socketio.on('ping')
+def handle_ping():
+    emit('pong', {"timestamp": datetime.datetime.now().isoformat()})
+
+
+# ── REST ENDPOINTS ───────────────────────────────────
 @app.route('/api/health', methods=['GET'])
 @limiter.limit("60 per minute")
 def health():
@@ -56,6 +78,7 @@ def health():
         "accuracy":  "92.2%",
         "database":  "Supabase PostgreSQL",
         "auth":      "JWT enabled",
+        "websocket": "enabled",
         "timestamp": datetime.datetime.now().isoformat()
     })
 
@@ -149,6 +172,16 @@ def predict():
         modality    = "text",
         alert       = alert
     )
+
+    # Real-time WebSocket alert
+    if alert:
+        socketio.emit('high_risk_alert', {
+            "risk_level":  risk_level,
+            "confidence":  confidence,
+            "message":     message,
+            "timestamp":   datetime.datetime.now().isoformat(),
+            "action":      "Immediate professional consultation recommended"
+        })
 
     return jsonify({
         "risk_level":        risk_level,
@@ -309,6 +342,16 @@ def predict_multimodal():
             alert       = final_result['alert_triggered']
         )
 
+        # Real-time WebSocket alert for multimodal
+        if final_result['alert_triggered']:
+            socketio.emit('high_risk_alert', {
+                "risk_level":  final_result['risk_level'],
+                "confidence":  final_result['final_risk_score'],
+                "modality":    "multimodal",
+                "message":     final_result['message'],
+                "timestamp":   datetime.datetime.now().isoformat()
+            })
+
     return jsonify(final_result), 200
 
 
@@ -366,6 +409,7 @@ if __name__ == '__main__':
     print("  Auth: JWT ENABLED - All endpoints protected")
     print("  Validation: ENABLED")
     print("  Dynamic Weights: ENABLED")
+    print("  WebSocket: ENABLED - Real-time alerts")
     print("  Endpoints:")
     print("    GET  /api/health         [public]")
     print("    POST /api/register       [public]")
@@ -379,5 +423,7 @@ if __name__ == '__main__':
     print("    POST /api/predict-multimodal [JWT]")
     print("    GET  /api/history        [JWT]")
     print("    GET  /api/db-stats       [JWT]")
+    print("  WebSocket Events:")
+    print("    connected, high_risk_alert, pong")
     print("="*50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
