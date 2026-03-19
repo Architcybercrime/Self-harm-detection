@@ -2,20 +2,27 @@
 auth.py
 JWT Authentication module for Self Harm Detection API.
 Handles user registration, login and token verification.
+Uses bcrypt for secure password hashing.
 """
 
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token
 from datetime import timedelta
-import hashlib
+import bcrypt
 import os
 
-# Simple in-memory user store (can be moved to Supabase later)
+# Simple in-memory user store
 users_db = {}
 
 
 def hash_password(password):
-    """Hash password using SHA-256."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash password using bcrypt."""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt)
+
+
+def verify_password(password, hashed):
+    """Verify password against bcrypt hash."""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed)
 
 
 def register_user(username, password):
@@ -36,7 +43,7 @@ def login_user(username, password):
     if username not in users_db:
         return {"success": False, "error": "User not found"}
 
-    if users_db[username]['password'] != hash_password(password):
+    if not verify_password(password, users_db[username]['password']):
         return {"success": False, "error": "Invalid password"}
 
     token = create_access_token(
@@ -54,7 +61,10 @@ def login_user(username, password):
 
 def setup_jwt(app):
     """Configure JWT with the Flask app."""
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
+    app.config['JWT_SECRET_KEY'] = os.getenv(
+        'JWT_SECRET_KEY', 
+        'selfharm-detection-secret-key-2026'
+    )
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
     jwt = JWTManager(app)
     return jwt
