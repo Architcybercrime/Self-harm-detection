@@ -20,3 +20,211 @@ Self-harm is a critical mental health concern that often remains undetected due 
 ---
 
 ## ⚙️ System Architecture & Workflow
+```
+Data Collection → Preprocessing → Feature Extraction → 
+Model Training → Evaluation → Flask API → Alert Generation
+```
+```
+Self-harm-detection/
+│
+├── backend/
+│   ├── app.py                  ← Flask REST API (12 endpoints)
+│   ├── model/
+│   │   └── train_model.py      ← ML model training
+│   ├── utils/
+│   │   ├── preprocess.py       ← Text preprocessing
+│   │   ├── facial_analysis.py  ← DeepFace emotion detection
+│   │   ├── speech_analysis.py  ← Librosa audio analysis
+│   │   ├── fusion.py           ← Multimodal risk fusion
+│   │   ├── monitor.py          ← Drift detection
+│   │   ├── database.py         ← Supabase integration
+│   │   ├── auth.py             ← JWT authentication
+│   │   └── validators.py       ← Input validation
+│   ├── tests/
+│   │   └── test_api.py         ← 22 pytest test cases
+│   └── data/
+│       └── README.md           ← Dataset instructions
+│
+├── frontend/
+│   ├── index.html              ← Main UI
+│   ├── style.css               ← Styling
+│   └── scripts.js              ← Frontend logic
+│
+├── docs/
+│   └── confusion_matrix.png    ← Model evaluation chart
+│
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend API | Python, Flask |
+| Machine Learning | Scikit-learn, NLTK |
+| Text Analysis | TF-IDF, VADER Sentiment |
+| Facial Analysis | DeepFace, OpenCV |
+| Speech Analysis | Librosa, SpeechRecognition |
+| Data Processing | Pandas, NumPy |
+| Database | Supabase PostgreSQL |
+| Authentication | JWT + Bcrypt |
+| Security | Flask-Talisman, Rate Limiting, CORS |
+| Testing | Pytest (22 test cases) |
+| Frontend | HTML5, CSS3, JavaScript |
+| Visualization | Matplotlib, Seaborn |
+| Model Persistence | Joblib |
+
+---
+
+## 🤖 ML Model Performance
+
+| Metric | Score |
+|---|---|
+| Accuracy | **92.2%** |
+| Precision | 92% |
+| Recall | 92% |
+| F1-Score | 0.92 |
+| CV F1 Score | 0.9218 |
+| Training Samples | 50,000 |
+
+### Confusion Matrix
+![Confusion Matrix](docs/confusion_matrix.png)
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Check API status |
+| POST | `/api/register` | Register new user |
+| POST | `/api/login` | Login and get JWT token |
+| GET | `/api/profile` | Get user profile [JWT] |
+| POST | `/api/predict` | Predict risk from text |
+| POST | `/api/analyze-face` | Webcam emotion analysis |
+| POST | `/api/analyze-speech` | Microphone speech analysis |
+| POST | `/api/predict-multimodal` | Combined risk prediction |
+| GET | `/api/stats` | Session statistics |
+| GET | `/api/monitor` | Drift detection report |
+| GET | `/api/history` | Prediction history from DB |
+| GET | `/api/db-stats` | Database statistics |
+
+### Sample Request
+```json
+POST /api/predict
+{
+  "text": "I feel completely hopeless and nobody cares"
+}
+```
+
+### Sample Response
+```json
+{
+  "alert_triggered": true,
+  "confidence": 0.894,
+  "message": "High risk indicators detected.",
+  "risk_level": "HIGH",
+  "sentiment_score": -0.5574
+}
+```
+
+---
+
+## 🔐 Security Features
+
+- ✅ JWT Authentication with 24hr token expiry
+- ✅ Bcrypt password hashing
+- ✅ Rate limiting on all endpoints
+- ✅ Security headers (XSS, Clickjacking protection)
+- ✅ CORS configuration
+- ✅ Input validation and sanitization
+- ✅ Environment variables for secrets
+
+---
+
+## 🧪 Testing
+```bash
+cd backend
+python -m pytest tests/test_api.py -v
+```
+
+**22 test cases covering:**
+- Health endpoint
+- Prediction (high risk, low risk, validation)
+- Authentication (register, login)
+- Database endpoints
+- Preprocessing pipeline
+- Multimodal fusion
+
+---
+
+## 🚀 Setup & Installation
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Architcybercrime/Self-harm-detection.git
+cd Self-harm-detection
+```
+
+### Step 2: Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Setup Environment Variables
+```bash
+cp backend/.env.example backend/.env
+# Fill in your Supabase and JWT credentials
+```
+
+### Step 4: Download Dataset
+Download from Kaggle and place in `backend/data/`:
+- Link: https://www.kaggle.com/datasets/nikhileswarkomati/suicide-watch
+- Filename: `Suicide_Detection.csv`
+
+### Step 5: Train the Model
+```bash
+cd backend
+python model/train_model.py
+```
+
+### Step 6: Run the API
+```bash
+python app.py
+```
+
+### Step 7: Open Frontend
+Open `frontend/index.html` in browser with API running.
+
+---
+
+## 🗺️ Future Enhancements
+- [ ] Cloud deployment on Render.com
+- [ ] Docker containerization
+- [ ] Real-time WebSocket alerts
+- [ ] Arduino heart rate sensor integration
+- [ ] Mobile PWA application
+
+---
+
+## ⚠️ Ethical Considerations
+- This system is a **support tool only** — not a replacement for professional diagnosis
+- Predictions are stored securely in cloud database
+- Alert system involves human-in-the-loop decision making
+- All passwords are hashed using bcrypt
+
+---
+
+## 👥 Team
+
+| Name | Role |
+|---|---|
+| Avani Upadhyay | Frontend Development, UI/UX |
+| Archit Agrawal | Backend API, ML Model, Database, Security |
+
+---
+
+> *"Early detection saves lives. AI can be a compassionate tool when built responsibly."*
