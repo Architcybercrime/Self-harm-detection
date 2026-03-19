@@ -11,6 +11,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app import app
+from flask_jwt_extended import create_access_token
 
 
 @pytest.fixture
@@ -19,6 +20,19 @@ def client():
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture
+def token():
+    """Generate JWT token for testing."""
+    with app.app_context():
+        return create_access_token(identity="testuser")
+
+
+@pytest.fixture
+def auth_headers(token):
+    """Return auth headers with JWT token."""
+    return {"Authorization": f"Bearer {token}"}
 
 
 # ── HEALTH ENDPOINT ──────────────────────────────────
@@ -32,76 +46,93 @@ def test_health_endpoint(client):
 
 
 # ── PREDICT ENDPOINT ─────────────────────────────────
-def test_predict_high_risk(client):
+def test_predict_high_risk(client, auth_headers):
     """Test prediction returns HIGH risk for distress text."""
     response = client.post('/api/predict',
-        json={"text": "I feel completely hopeless and want to disappear"})
+        json={"text": "I feel completely hopeless and want to disappear"},
+        headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert data['risk_level'] == 'HIGH'
     assert data['alert_triggered'] == True
     assert 'confidence' in data
     assert 'sentiment_score' in data
+    assert 'risk_indicators' in data
+    assert 'recommendations' in data
 
 
-def test_predict_low_risk(client):
+def test_predict_low_risk(client, auth_headers):
     """Test prediction returns LOW risk for normal text."""
     response = client.post('/api/predict',
-        json={"text": "I had a great day today, feeling wonderful!"})
+        json={"text": "I had a great day today, feeling wonderful!"},
+        headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert data['risk_level'] == 'LOW'
     assert data['alert_triggered'] == False
 
 
-def test_predict_missing_text(client):
+def test_predict_missing_text(client, auth_headers):
     """Test prediction returns 400 when text is missing."""
-    response = client.post('/api/predict', json={})
+    response = client.post('/api/predict',
+        json={},
+        headers=auth_headers)
     assert response.status_code == 400
     data = response.get_json()
     assert 'error' in data
 
 
-def test_predict_empty_text(client):
+def test_predict_empty_text(client, auth_headers):
     """Test prediction returns 400 when text is empty."""
-    response = client.post('/api/predict', json={"text": ""})
+    response = client.post('/api/predict',
+        json={"text": ""},
+        headers=auth_headers)
     assert response.status_code == 400
 
 
-def test_predict_text_too_long(client):
+def test_predict_text_too_long(client, auth_headers):
     """Test prediction returns 400 when text exceeds limit."""
     long_text = "a" * 5001
-    response = client.post('/api/predict', json={"text": long_text})
+    response = client.post('/api/predict',
+        json={"text": long_text},
+        headers=auth_headers)
     assert response.status_code == 400
+
+
+def test_predict_unauthorized(client):
+    """Test prediction returns 401 without JWT token."""
+    response = client.post('/api/predict',
+        json={"text": "I feel hopeless"})
+    assert response.status_code == 401
 
 
 # ── STATS ENDPOINT ───────────────────────────────────
-def test_stats_endpoint(client):
+def test_stats_endpoint(client, auth_headers):
     """Test stats endpoint works."""
-    response = client.get('/api/stats')
+    response = client.get('/api/stats', headers=auth_headers)
     assert response.status_code == 200
 
 
 # ── MONITOR ENDPOINT ─────────────────────────────────
-def test_monitor_endpoint(client):
+def test_monitor_endpoint(client, auth_headers):
     """Test monitor endpoint works."""
-    response = client.get('/api/monitor')
+    response = client.get('/api/monitor', headers=auth_headers)
     assert response.status_code == 200
 
 
 # ── HISTORY ENDPOINT ─────────────────────────────────
-def test_history_endpoint(client):
+def test_history_endpoint(client, auth_headers):
     """Test history endpoint returns data."""
-    response = client.get('/api/history')
+    response = client.get('/api/history', headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert 'success' in data
 
 
 # ── DB STATS ENDPOINT ────────────────────────────────
-def test_db_stats_endpoint(client):
+def test_db_stats_endpoint(client, auth_headers):
     """Test db-stats endpoint returns statistics."""
-    response = client.get('/api/db-stats')
+    response = client.get('/api/db-stats', headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert 'success' in data
@@ -133,6 +164,8 @@ def test_fusion_text_only():
     assert 'final_risk_score' in result
     assert 'risk_level' in result
     assert 'alert_triggered' in result
+    assert 'weights_applied' in result
+    assert 'weight_explanation' in result
 
 
 def test_fusion_no_input():
@@ -140,6 +173,28 @@ def test_fusion_no_input():
     from utils.fusion import fuse_risk_scores
 
     result = fuse_risk_scores()
+    assert 'error' in result
+
+
+def test_fusion_custom_weights():
+    """Test fusion with custom weights."""
+    from utils.fusion import fuse_risk_scores
+
+    result = fuse_risk_scores(
+        text_result={"risk_level": "HIGH", "confidence": 0.9},
+        custom_weights={"text": 1.0, "facial": 0.0, "speech": 0.0}
+    )
+    assert 'final_risk_score' in result
+
+
+def test_fusion_invalid_weights():
+    """Test fusion with invalid weights returns error."""
+    from utils.fusion import fuse_risk_scores
+
+    result = fuse_risk_scores(
+        text_result={"risk_level": "HIGH", "confidence": 0.9},
+        custom_weights={"text": 0.5, "facial": 0.5, "speech": 0.5}
+    )
     assert 'error' in result
 
 
@@ -192,39 +247,46 @@ def test_login_missing_fields(client):
 
 
 # ── VALIDATORS ───────────────────────────────────────
-def test_validate_text_too_short(client):
+def test_validate_text_too_short(client, auth_headers):
     """Test prediction fails with too short text."""
     response = client.post('/api/predict',
-        json={"text": "hi"})
+        json={"text": "hi"},
+        headers=auth_headers)
     assert response.status_code == 400
 
 
-def test_validate_special_characters(client):
+def test_validate_special_characters(client, auth_headers):
     """Test prediction works with special characters."""
     response = client.post('/api/predict',
-        json={"text": "I feel very sad and hopeless today!!!"})
+        json={"text": "I feel very sad and hopeless today!!!"},
+        headers=auth_headers)
     assert response.status_code == 200
 
 
-def test_db_stats_structure(client):
+def test_db_stats_structure(client, auth_headers):
     """Test db-stats returns correct structure."""
-    response = client.get('/api/db-stats')
+    response = client.get('/api/db-stats', headers=auth_headers)
     assert response.status_code == 200
     data = response.get_json()
     assert 'success' in data
 
 
-    # ── SPEECH ANALYSIS ──────────────────────────────────
-def test_speech_endpoint_no_input(client):
+# ── SPEECH ANALYSIS ──────────────────────────────────
+def test_speech_endpoint_no_input(client, auth_headers):
     """Test speech endpoint returns error with no input."""
-    response = client.post('/api/analyze-speech', json={})
+    response = client.post('/api/analyze-speech',
+        json={},
+        headers=auth_headers)
     assert response.status_code == 400
 
-def test_speech_endpoint_invalid_duration(client):
+
+def test_speech_endpoint_invalid_duration(client, auth_headers):
     """Test speech endpoint rejects invalid duration."""
     response = client.post('/api/analyze-speech',
-        json={"use_microphone": True, "duration": 100})
+        json={"use_microphone": True, "duration": 100},
+        headers=auth_headers)
     assert response.status_code == 400
+
 
 def test_speech_analysis_module():
     """Test speech analysis module loads correctly."""
