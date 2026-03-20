@@ -106,6 +106,8 @@ if 'username' not in st.session_state:
     st.session_state.username = ''
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+if 'is_guest' not in st.session_state:
+    st.session_state.is_guest = False
 if 'report_data' not in st.session_state:
     st.session_state.report_data = None
 if 'last_text' not in st.session_state:
@@ -120,7 +122,7 @@ if not st.session_state.logged_in:
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
+        tab1, tab2, tab3 = st.tabs(["🔐 Login", "📝 Register", "👤 Guest Access"])
 
         with tab1:
             st.subheader("Login")
@@ -136,6 +138,7 @@ if not st.session_state.logged_in:
                         st.session_state.token     = data['access_token']
                         st.session_state.username  = username
                         st.session_state.logged_in = True
+                        st.session_state.is_guest  = False
                         st.success("Login successful!")
                         st.rerun()
                     else:
@@ -160,24 +163,61 @@ if not st.session_state.logged_in:
                 else:
                     st.warning("Please fill all fields")
 
+        with tab3:
+            st.subheader("👤 Guest Access")
+            st.info("Try the system without creating an account!")
+            st.warning("⚠️ Guest limitations: No history saved, No PDF reports, No webcam/microphone")
+            st.markdown("""
+            **What you CAN do as guest:**
+            - ✅ Text analysis
+            - ✅ See risk level and indicators
+            - ✅ View support resources
+            - ✅ See monitoring dashboard
+
+            **What requires login:**
+            - 🔒 Download PDF reports
+            - 🔒 Save prediction history
+            - 🔒 Webcam & microphone analysis
+            - 🔒 Multimodal analysis
+            """)
+            if st.button("Continue as Guest →", type="primary"):
+                st.session_state.logged_in = True
+                st.session_state.username  = "Guest"
+                st.session_state.is_guest  = True
+                st.session_state.token     = ""
+                st.rerun()
+
     st.stop()
 
 
 # ── SIDEBAR ──────────────────────────────────────────
 with st.sidebar:
     st.title("🧠 Self Harm Detection")
-    st.success(f"👤 {st.session_state.username}")
+
+    if st.session_state.is_guest:
+        st.warning("👤 Guest User")
+        st.caption("Login for full access")
+    else:
+        st.success(f"👤 {st.session_state.username}")
+
     st.divider()
 
-    page = st.radio("Navigation", [
-        "🏠 Dashboard",
-        "📝 Text Analysis",
-        "📷 Facial Analysis",
-        "🎤 Speech Analysis",
-        "🔀 Multimodal Analysis",
-        "📊 Monitoring",
-        "📈 History",
-    ])
+    if st.session_state.is_guest:
+        page = st.radio("Navigation", [
+            "🏠 Dashboard",
+            "📝 Text Analysis",
+            "📊 Monitoring",
+        ])
+    else:
+        page = st.radio("Navigation", [
+            "🏠 Dashboard",
+            "📝 Text Analysis",
+            "📷 Facial Analysis",
+            "🎤 Speech Analysis",
+            "🔀 Multimodal Analysis",
+            "📊 Monitoring",
+            "📈 History",
+        ])
 
     st.divider()
 
@@ -190,35 +230,48 @@ with st.sidebar:
         st.error("🔴 API Offline")
 
     st.divider()
-    if st.button("🚪 Logout"):
-        st.session_state.logged_in  = False
-        st.session_state.token      = ''
-        st.session_state.username   = ''
-        st.session_state.report_data = None
-        st.rerun()
+    if st.session_state.is_guest:
+        if st.button("🔐 Login / Register"):
+            st.session_state.logged_in = False
+            st.session_state.is_guest  = False
+            st.session_state.username  = ''
+            st.rerun()
+    else:
+        if st.button("🚪 Logout"):
+            st.session_state.logged_in   = False
+            st.session_state.token       = ''
+            st.session_state.username    = ''
+            st.session_state.is_guest    = False
+            st.session_state.report_data = None
+            st.rerun()
 
 
 # ── DASHBOARD ────────────────────────────────────────
 if page == "🏠 Dashboard":
     st.title("🏠 Dashboard")
-    st.markdown(f"Welcome back, **{st.session_state.username}**!")
+    if st.session_state.is_guest:
+        st.markdown("Welcome, **Guest User**! 👋")
+        st.info("🔒 Login to access full features including PDF reports and history.")
+    else:
+        st.markdown(f"Welcome back, **{st.session_state.username}**!")
     st.divider()
 
-    stats, _    = api_get("/api/stats")
-    db_stats, _ = api_get("/api/db-stats")
+    if not st.session_state.is_guest:
+        stats, _    = api_get("/api/stats")
+        db_stats, _ = api_get("/api/db-stats")
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Session Predictions", stats.get('total_predictions', 0))
-    with col2:
-        st.metric("Alerts Triggered", stats.get('alerts_triggered', 0))
-    with col3:
-        rate = stats.get('alert_rate', 0)
-        st.metric("Alert Rate", f"{rate:.1%}")
-    with col4:
-        st.metric("Total DB Records", db_stats.get('total_predictions', 0))
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Session Predictions", stats.get('total_predictions', 0))
+        with col2:
+            st.metric("Alerts Triggered", stats.get('alerts_triggered', 0))
+        with col3:
+            rate = stats.get('alert_rate', 0)
+            st.metric("Alert Rate", f"{rate:.1%}")
+        with col4:
+            st.metric("Total DB Records", db_stats.get('total_predictions', 0))
+        st.divider()
 
-    st.divider()
     st.subheader("⚡ Quick Analysis")
     quick_text = st.text_area("Enter text to analyze:", height=100,
                                placeholder="Type something here...")
@@ -227,7 +280,11 @@ if page == "🏠 Dashboard":
     with col1:
         analyze_clicked = st.button("🔍 Analyze Now", type="primary", use_container_width=True)
     with col2:
-        report_clicked = st.button("📄 Analyze + Download Report", use_container_width=True)
+        if st.session_state.is_guest:
+            st.button("🔒 PDF Report (Login Required)", disabled=True, use_container_width=True)
+            report_clicked = False
+        else:
+            report_clicked = st.button("📄 Analyze + Download Report", use_container_width=True)
 
     if (analyze_clicked or report_clicked) and quick_text:
         with st.spinner("Analyzing..."):
@@ -241,7 +298,7 @@ if page == "🏠 Dashboard":
                 col2.metric("Confidence Level", ri.get('confidence_level', 'N/A'))
                 col3.metric("Severity",         ri.get('severity', 'N/A'))
 
-            if report_clicked:
+            if report_clicked and not st.session_state.is_guest:
                 with st.spinner("Generating professional PDF report..."):
                     pdf_bytes, success = download_report(quick_text)
                 if success:
@@ -265,18 +322,29 @@ if page == "🏠 Dashboard":
 elif page == "📝 Text Analysis":
     st.title("📝 Text Analysis")
     st.markdown("Analyze text for self-harm risk indicators using NLP + ML (92.2% accuracy)")
+    if st.session_state.is_guest:
+        st.info("👤 Guest Mode — Login to download PDF reports")
     st.divider()
 
     text_input = st.text_area("Enter text to analyze:", height=150,
                                placeholder="Enter any text here...")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        analyze_btn = st.button("🔍 Analyze Text", type="primary", use_container_width=True)
-    with col2:
-        report_btn = st.button("📄 Generate PDF Report", use_container_width=True)
-    with col3:
-        clear_btn = st.button("🗑️ Clear", use_container_width=True)
+    if st.session_state.is_guest:
+        col1, col2 = st.columns(2)
+        with col1:
+            analyze_btn = st.button("🔍 Analyze Text", type="primary", use_container_width=True)
+        with col2:
+            st.button("🔒 PDF Report (Login Required)", disabled=True, use_container_width=True)
+        report_btn = False
+        clear_btn  = False
+    else:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            analyze_btn = st.button("🔍 Analyze Text", type="primary", use_container_width=True)
+        with col2:
+            report_btn = st.button("📄 Generate PDF Report", use_container_width=True)
+        with col3:
+            clear_btn = st.button("🗑️ Clear", use_container_width=True)
 
     if analyze_btn and text_input:
         with st.spinner("Analyzing text..."):
@@ -309,12 +377,13 @@ elif page == "📝 Text Analysis":
                 for resource in data['recommendations'].get('support_resources', []):
                     st.info(f"📱 {resource}")
 
-            st.divider()
-            st.info("💡 Click **Generate PDF Report** to download a professional clinical report!")
+            if not st.session_state.is_guest:
+                st.divider()
+                st.info("💡 Click **Generate PDF Report** to download a professional clinical report!")
         else:
             st.error(f"Error: {data.get('error', 'Unknown error')}")
 
-    if report_btn and text_input:
+    if not st.session_state.is_guest and report_btn and text_input:
         with st.spinner("Generating professional psychological report..."):
             pdf_bytes, success = download_report(text_input)
         if success:
@@ -328,8 +397,7 @@ elif page == "📝 Text Analysis":
             )
         else:
             st.error("Failed to generate report. Make sure API is running.")
-
-    elif report_btn and not text_input:
+    elif not st.session_state.is_guest and report_btn and not text_input:
         st.warning("Please enter text first before generating report!")
 
 
