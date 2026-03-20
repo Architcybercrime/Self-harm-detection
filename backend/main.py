@@ -20,14 +20,14 @@ warnings.filterwarnings('ignore')
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
-import joblib, sys, datetime, os
+import joblib, sys, datetime, uuid
 import numpy as np
 from jose import JWTError, jwt
 from dotenv import load_dotenv
@@ -77,8 +77,8 @@ class LoginInput(BaseModel):
 
 
 class FaceInput(BaseModel):
-    use_webcam:   Optional[bool]   = False
-    image_base64: Optional[str]    = None
+    use_webcam:   Optional[bool] = False
+    image_base64: Optional[str]  = None
 
 
 class SpeechInput(BaseModel):
@@ -111,6 +111,7 @@ app = FastAPI(
 - Real-time WebSocket alerts
 - Supabase PostgreSQL database
 - JWT Authentication
+- **Professional PDF Report Generation**
 
 ### Authentication
 Use the **Authorize** button with: `Bearer YOUR_JWT_TOKEN`
@@ -180,6 +181,49 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
                             detail="Invalid or expired token")
 
 
+def run_prediction(text):
+    """Helper to run ML prediction on text."""
+    cleaned   = full_preprocess(text)
+    scores    = get_sentiment_scores(text)
+    sentiment = scores['compound']
+    neg_score = scores['neg']
+
+    tfidf_vec  = tfidf.transform([cleaned]).toarray()
+    X          = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+    prediction = model.predict(X)[0]
+    probability= model.predict_proba(X)[0]
+    confidence = round(float(max(probability)), 4)
+
+    risk_level = 'HIGH' if prediction == 'suicide' else 'LOW'
+    alert      = risk_level == 'HIGH'
+    message    = ('High risk indicators detected. Please seek professional support immediately.'
+                  if alert else 'No immediate concern detected. Continue monitoring.')
+
+    return {
+        "risk_level":      risk_level,
+        "confidence":      confidence,
+        "alert_triggered": alert,
+        "sentiment_score": round(sentiment, 4),
+        "message":         message,
+        "modality":        "text",
+        "risk_indicators": {
+            "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
+            "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
+            "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
+        },
+        "recommendations": {
+            "immediate_action":  alert,
+            "support_resources": [
+                "iCall: 9152987821",
+                "Vandrevala Foundation: 1860-2662-345",
+                "AASRA: 9820466627"
+            ] if alert else [],
+            "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
+        },
+        "analysis_timestamp": datetime.datetime.now().isoformat()
+    }
+
+
 # ── HEALTH ───────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health():
@@ -221,67 +265,56 @@ def login(data: LoginInput):
 async def predict(data: TextInput,
                   current_user: str = Depends(verify_token)):
     """Predict self-harm risk from text (92.2% accuracy)"""
-
-    text      = data.text
-    cleaned   = full_preprocess(text)
-    scores    = get_sentiment_scores(text)
-    sentiment = scores['compound']
-    neg_score = scores['neg']
-
-    tfidf_vec  = tfidf.transform([cleaned]).toarray()
-    X          = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-    prediction = model.predict(X)[0]
-    probability= model.predict_proba(X)[0]
-    confidence = round(float(max(probability)), 4)
-
-    if prediction == 'suicide':
-        risk_level = 'HIGH'
-        alert      = True
-        message    = 'High risk indicators detected. Please seek professional support immediately.'
-    else:
-        risk_level = 'LOW'
-        alert      = False
-        message    = 'No immediate concern detected. Continue monitoring.'
+    result = run_prediction(data.text)
 
     prediction_log.append({
         "timestamp":  datetime.datetime.now().isoformat(),
-        "risk_level": risk_level,
-        "confidence": confidence
+        "risk_level": result['risk_level'],
+        "confidence": result['confidence']
     })
 
-    log_prediction(len(text.split()), risk_level, confidence, round(sentiment, 4))
-    save_prediction(text, risk_level, confidence, round(sentiment, 4), "text", alert)
+    log_prediction(len(data.text.split()), result['risk_level'],
+                   result['confidence'], result['sentiment_score'])
+    save_prediction(data.text, result['risk_level'], result['confidence'],
+                    result['sentiment_score'], "text", result['alert_triggered'])
 
-    if alert:
+    if result['alert_triggered']:
         await sio.emit('high_risk_alert', {
-            "risk_level": risk_level,
-            "confidence": confidence,
-            "message":    message,
+            "risk_level": result['risk_level'],
+            "confidence": result['confidence'],
+            "message":    result['message'],
             "timestamp":  datetime.datetime.now().isoformat()
         })
 
-    return {
-        "risk_level":        risk_level,
-        "confidence":        confidence,
-        "alert_triggered":   alert,
-        "sentiment_score":   round(sentiment, 4),
-        "message":           message,
-        "risk_indicators": {
-            "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
-            "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
-            "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
-        },
-        "recommendations": {
-            "immediate_action":  alert,
-            "support_resources": [
-                "iCall: 9152987821",
-                "Vandrevala Foundation: 1860-2662-345",
-                "AASRA: 9820466627"
-            ] if alert else [],
-            "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
-        },
-        "analysis_timestamp": datetime.datetime.now().isoformat()
-    }
+    return result
+
+
+# ── GENERATE REPORT ──────────────────────────────────
+@app.post("/api/generate-report", tags=["Report"])
+async def generate_report_endpoint(data: TextInput,
+                                    current_user: str = Depends(verify_token)):
+    """
+    Generate a professional psychological risk assessment PDF report.
+    Returns a downloadable PDF file.
+    """
+    from utils.report_generator import generate_report as gen_report
+
+    prediction_data = run_prediction(data.text)
+    prediction_data['analysis_timestamp'] = datetime.datetime.now().isoformat()
+
+    report_id = str(uuid.uuid4())[:8].upper()
+    filepath  = gen_report(prediction_data,
+                            username=current_user,
+                            report_id=report_id)
+
+    return FileResponse(
+        filepath,
+        media_type = "application/pdf",
+        filename   = f"risk_assessment_{report_id}.pdf",
+        headers    = {
+            "Content-Disposition": f"attachment; filename=risk_assessment_{report_id}.pdf"
+        }
+    )
 
 
 # ── STATS ────────────────────────────────────────────
@@ -343,18 +376,11 @@ async def predict_multimodal(data: MultimodalInput,
     text = ""
 
     if data.text:
-        text      = data.text.strip()
-        cleaned   = full_preprocess(text)
-        scores    = get_sentiment_scores(text)
-        sentiment = scores['compound']
-        neg_score = scores['neg']
-        tfidf_vec  = tfidf.transform([cleaned]).toarray()
-        X          = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-        prediction = model.predict(X)[0]
-        probability= model.predict_proba(X)[0]
+        text        = data.text.strip()
+        text_result = run_prediction(text)
         text_result = {
-            "risk_level": 'HIGH' if prediction == 'suicide' else 'LOW',
-            "confidence": round(float(max(probability)), 4)
+            "risk_level": text_result['risk_level'],
+            "confidence": text_result['confidence']
         }
 
     if data.use_webcam:
@@ -424,8 +450,10 @@ if __name__ == '__main__':
     print("  Self Harm Detection API - FastAPI")
     print("  Version: 2.0.0")
     print("  Accuracy: 92.2%")
-    print("  Docs: http://127.0.0.1:8000/docs")
+    print("  Docs:  http://127.0.0.1:8000/docs")
     print("  ReDoc: http://127.0.0.1:8000/redoc")
+    print("  Endpoints:")
+    print("    POST /api/generate-report [JWT] ← NEW!")
     print("="*50)
     uvicorn.run("main:socket_app", host="0.0.0.0",
                 port=8000, reload=True)

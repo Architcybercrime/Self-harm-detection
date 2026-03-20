@@ -52,8 +52,24 @@ def api_get(endpoint):
         return {"error": str(e)}, 500
 
 
+def download_report(text):
+    """Generate and return PDF report bytes."""
+    try:
+        r = requests.post(
+            f"{API_URL}/api/generate-report",
+            json={"text": text},
+            headers=get_headers(),
+            timeout=60
+        )
+        if r.status_code == 200:
+            return r.content, True
+        return None, False
+    except Exception as e:
+        return None, False
+
+
 def show_risk(data):
-    rl = data.get('risk_level', 'UNKNOWN')
+    rl   = data.get('risk_level', 'UNKNOWN')
     conf = data.get('confidence', data.get('final_risk_score', 0))
     msg  = data.get('message', data.get('monitoring_message', ''))
 
@@ -90,6 +106,10 @@ if 'username' not in st.session_state:
     st.session_state.username = ''
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
+if 'report_data' not in st.session_state:
+    st.session_state.report_data = None
+if 'last_text' not in st.session_state:
+    st.session_state.last_text = ''
 
 
 # ── LOGIN PAGE ───────────────────────────────────────
@@ -113,8 +133,8 @@ if not st.session_state.logged_in:
                         "password": password
                     })
                     if code == 200 and data.get('success'):
-                        st.session_state.token    = data['access_token']
-                        st.session_state.username = username
+                        st.session_state.token     = data['access_token']
+                        st.session_state.username  = username
                         st.session_state.logged_in = True
                         st.success("Login successful!")
                         st.rerun()
@@ -161,19 +181,20 @@ with st.sidebar:
 
     st.divider()
 
-    # API Health
     health, code = api_get("/api/health")
     if code == 200:
         st.success("🟢 API Online")
         st.caption(f"Accuracy: {health.get('accuracy', 'N/A')}")
+        st.caption(f"Framework: {health.get('framework', 'FastAPI')}")
     else:
         st.error("🔴 API Offline")
 
     st.divider()
     if st.button("🚪 Logout"):
-        st.session_state.logged_in = False
-        st.session_state.token = ''
-        st.session_state.username = ''
+        st.session_state.logged_in  = False
+        st.session_state.token      = ''
+        st.session_state.username   = ''
+        st.session_state.report_data = None
         st.rerun()
 
 
@@ -183,46 +204,61 @@ if page == "🏠 Dashboard":
     st.markdown(f"Welcome back, **{st.session_state.username}**!")
     st.divider()
 
-    # Stats
-    stats, _ = api_get("/api/stats")
+    stats, _    = api_get("/api/stats")
     db_stats, _ = api_get("/api/db-stats")
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        total = stats.get('total_predictions', 0)
-        st.metric("Session Predictions", total)
+        st.metric("Session Predictions", stats.get('total_predictions', 0))
     with col2:
-        alerts = stats.get('alerts_triggered', 0)
-        st.metric("Alerts Triggered", alerts)
+        st.metric("Alerts Triggered", stats.get('alerts_triggered', 0))
     with col3:
         rate = stats.get('alert_rate', 0)
         st.metric("Alert Rate", f"{rate:.1%}")
     with col4:
-        db_total = db_stats.get('total_predictions', 0)
-        st.metric("Total DB Records", db_total)
+        st.metric("Total DB Records", db_stats.get('total_predictions', 0))
 
     st.divider()
-
-    # Quick text analysis
     st.subheader("⚡ Quick Analysis")
     quick_text = st.text_area("Enter text to analyze:", height=100,
                                placeholder="Type something here...")
-    if st.button("Analyze Now", type="primary"):
-        if quick_text:
-            with st.spinner("Analyzing..."):
-                data, code = api_post("/api/predict", {"text": quick_text})
-            if code == 200:
-                show_risk(data)
-                if 'risk_indicators' in data:
-                    ri = data['risk_indicators']
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Sentiment", ri.get('text_sentiment', 'N/A'))
-                    col2.metric("Confidence Level", ri.get('confidence_level', 'N/A'))
-                    col3.metric("Severity", ri.get('severity', 'N/A'))
-            else:
-                st.error(data.get('error', 'Analysis failed'))
+
+    col1, col2 = st.columns(2)
+    with col1:
+        analyze_clicked = st.button("🔍 Analyze Now", type="primary", use_container_width=True)
+    with col2:
+        report_clicked = st.button("📄 Analyze + Download Report", use_container_width=True)
+
+    if (analyze_clicked or report_clicked) and quick_text:
+        with st.spinner("Analyzing..."):
+            data, code = api_post("/api/predict", {"text": quick_text})
+        if code == 200:
+            show_risk(data)
+            if 'risk_indicators' in data:
+                ri = data['risk_indicators']
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Sentiment",        ri.get('text_sentiment', 'N/A'))
+                col2.metric("Confidence Level", ri.get('confidence_level', 'N/A'))
+                col3.metric("Severity",         ri.get('severity', 'N/A'))
+
+            if report_clicked:
+                with st.spinner("Generating professional PDF report..."):
+                    pdf_bytes, success = download_report(quick_text)
+                if success:
+                    st.download_button(
+                        label     = "⬇️ Download PDF Report",
+                        data      = pdf_bytes,
+                        file_name = "risk_assessment_report.pdf",
+                        mime      = "application/pdf",
+                        type      = "primary"
+                    )
+                    st.success("✅ Report ready! Click above to download.")
+                else:
+                    st.error("Failed to generate report")
         else:
-            st.warning("Please enter some text")
+            st.error(data.get('error', 'Analysis failed'))
+    elif (analyze_clicked or report_clicked) and not quick_text:
+        st.warning("Please enter some text")
 
 
 # ── TEXT ANALYSIS ────────────────────────────────────
@@ -234,15 +270,18 @@ elif page == "📝 Text Analysis":
     text_input = st.text_area("Enter text to analyze:", height=150,
                                placeholder="Enter any text here...")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         analyze_btn = st.button("🔍 Analyze Text", type="primary", use_container_width=True)
     with col2:
+        report_btn = st.button("📄 Generate PDF Report", use_container_width=True)
+    with col3:
         clear_btn = st.button("🗑️ Clear", use_container_width=True)
 
     if analyze_btn and text_input:
         with st.spinner("Analyzing text..."):
             data, code = api_post("/api/predict", {"text": text_input})
+            st.session_state.last_text = text_input
 
         if code == 200:
             st.divider()
@@ -254,23 +293,44 @@ elif page == "📝 Text Analysis":
                 st.subheader("Risk Indicators")
                 if 'risk_indicators' in data:
                     ri = data['risk_indicators']
-                    st.metric("Text Sentiment", ri.get('text_sentiment', 'N/A'))
+                    st.metric("Text Sentiment",   ri.get('text_sentiment', 'N/A'))
                     st.metric("Confidence Level", ri.get('confidence_level', 'N/A'))
-                    st.metric("Severity", ri.get('severity', 'N/A'))
+                    st.metric("Severity",         ri.get('severity', 'N/A'))
 
             with col2:
                 st.subheader("Analysis Details")
                 st.metric("Sentiment Score", f"{data.get('sentiment_score', 0):.4f}")
-                st.metric("Confidence", f"{data.get('confidence', 0):.1%}")
-                st.metric("Alert", "YES 🚨" if data.get('alert_triggered') else "NO ✅")
+                st.metric("Confidence",      f"{data.get('confidence', 0):.1%}")
+                st.metric("Alert",           "YES 🚨" if data.get('alert_triggered') else "NO ✅")
 
             if data.get('alert_triggered') and 'recommendations' in data:
                 st.divider()
                 st.subheader("📞 Support Resources")
                 for resource in data['recommendations'].get('support_resources', []):
                     st.info(f"📱 {resource}")
+
+            st.divider()
+            st.info("💡 Click **Generate PDF Report** to download a professional clinical report!")
         else:
             st.error(f"Error: {data.get('error', 'Unknown error')}")
+
+    if report_btn and text_input:
+        with st.spinner("Generating professional psychological report..."):
+            pdf_bytes, success = download_report(text_input)
+        if success:
+            st.success("✅ Professional report generated!")
+            st.download_button(
+                label     = "⬇️ Download Professional PDF Report",
+                data      = pdf_bytes,
+                file_name = f"risk_assessment_{st.session_state.username}.pdf",
+                mime      = "application/pdf",
+                type      = "primary"
+            )
+        else:
+            st.error("Failed to generate report. Make sure API is running.")
+
+    elif report_btn and not text_input:
+        st.warning("Please enter text first before generating report!")
 
 
 # ── FACIAL ANALYSIS ──────────────────────────────────
@@ -298,7 +358,7 @@ elif page == "📷 Facial Analysis":
             st.divider()
             col1, col2 = st.columns(2)
             col1.metric("Facial Risk Score", f"{data.get('facial_risk_score', 0):.4f}")
-            col2.metric("Risk Level", data.get('risk_level', 'N/A'))
+            col2.metric("Risk Level",        data.get('risk_level', 'N/A'))
         else:
             st.error(f"Error: {data.get('error', 'Webcam failed')}")
 
@@ -333,21 +393,21 @@ elif page == "🎤 Speech Analysis":
         with st.spinner(f"Recording for {duration} seconds... SPEAK NOW!"):
             data, code = api_post("/api/analyze-speech", {
                 "use_microphone": True,
-                "duration": duration
+                "duration":       duration
             })
 
         if code == 200 and data.get('success'):
             st.success("Analysis complete!")
 
             col1, col2, col3 = st.columns(3)
-            col1.metric("Tempo (BPM)", f"{data.get('tempo_bpm', 0):.1f}")
-            col2.metric("Pitch (Hz)", f"{data.get('avg_pitch_hz', 0):.1f}")
-            col3.metric("Energy Level", f"{data.get('energy_level', 0):.4f}")
+            col1.metric("Tempo (BPM)",   f"{data.get('tempo_bpm', 0):.1f}")
+            col2.metric("Pitch (Hz)",    f"{data.get('avg_pitch_hz', 0):.1f}")
+            col3.metric("Energy Level",  f"{data.get('energy_level', 0):.4f}")
 
             st.divider()
             col1, col2 = st.columns(2)
             col1.metric("Speech Risk Score", f"{data.get('speech_risk_score', 0):.4f}")
-            col2.metric("Risk Level", data.get('risk_level', 'N/A'))
+            col2.metric("Risk Level",        data.get('risk_level', 'N/A'))
 
             if data.get('transcription'):
                 st.subheader("📝 Transcription")
@@ -384,7 +444,7 @@ elif page == "🔀 Multimodal Analysis":
     st.caption("Adjust how much each modality contributes to the final score")
     col1, col2, col3 = st.columns(3)
     with col1:
-        text_w = st.slider("Text Weight", 0.0, 1.0, 0.5, 0.1)
+        text_w = st.slider("Text Weight",   0.0, 1.0, 0.5, 0.1)
     with col2:
         face_w = st.slider("Facial Weight", 0.0, 1.0, 0.3, 0.1)
     with col3:
@@ -402,10 +462,10 @@ elif page == "🔀 Multimodal Analysis":
             st.warning("Please enter some text")
         else:
             payload = {
-                "text":          text_input,
-                "use_webcam":    use_webcam,
+                "text":           text_input,
+                "use_webcam":     use_webcam,
                 "use_microphone": use_mic,
-                "duration":      duration
+                "duration":       duration
             }
             if custom_weights:
                 payload['weights'] = custom_weights
@@ -423,7 +483,7 @@ elif page == "🔀 Multimodal Analysis":
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     ts = scores.get('text_score')
-                    st.metric("Text Score", f"{ts:.4f}" if ts else "N/A")
+                    st.metric("Text Score",   f"{ts:.4f}" if ts else "N/A")
                 with col2:
                     fs = scores.get('facial_score')
                     st.metric("Facial Score", f"{fs:.4f}" if fs else "N/A")
@@ -433,10 +493,22 @@ elif page == "🔀 Multimodal Analysis":
 
                 if 'weights_applied' in data:
                     st.subheader("Weights Applied")
-                    wa = data['weights_applied']
+                    wa   = data['weights_applied']
                     cols = st.columns(len(wa))
                     for i, (k, v) in enumerate(wa.items()):
                         cols[i].metric(k.capitalize(), f"{v:.0%}")
+
+                st.divider()
+                if text_input:
+                    with st.spinner("Generating report..."):
+                        pdf_bytes, success = download_report(text_input)
+                    if success:
+                        st.download_button(
+                            label     = "⬇️ Download Full Multimodal Report",
+                            data      = pdf_bytes,
+                            file_name = "multimodal_risk_report.pdf",
+                            mime      = "application/pdf"
+                        )
             else:
                 st.error(data.get('error', 'Analysis failed'))
 
@@ -525,7 +597,6 @@ elif page == "📈 History":
 
             st.dataframe(df, use_container_width=True)
 
-            # Stats
             st.divider()
             db_stats, _ = api_get("/api/db-stats")
             if db_stats.get('success'):
