@@ -22,29 +22,32 @@ Self-harm is a critical mental health concern that often remains undetected due 
 ## ⚙️ System Architecture & Workflow
 ```
 Data Collection → Preprocessing → Feature Extraction → 
-Model Training → Evaluation → Flask API → Alert Generation
+Model Training → Evaluation → FastAPI → Alert Generation → PDF Report
 ```
 ```
 Self-harm-detection/
 │
 ├── backend/
-│   ├── app.py                  ← Flask REST API (12 endpoints)
+│   ├── app.py                  ← Flask REST API (port 5000)
+│   ├── main.py                 ← FastAPI v2.0 (port 8000) ← PRIMARY
 │   ├── model/
 │   │   └── train_model.py      ← ML model training
 │   ├── utils/
 │   │   ├── preprocess.py       ← Text preprocessing
-│   │   ├── facial_analysis.py  ← DeepFace real-time webcam detection
+│   │   ├── facial_analysis.py  ← DeepFace real-time webcam
 │   │   ├── speech_analysis.py  ← Librosa audio analysis
 │   │   ├── fusion.py           ← Multimodal risk fusion
-│   │   ├── monitor.py          ← Drift detection
+│   │   ├── monitor.py          ← Trend-based drift detection
 │   │   ├── database.py         ← Supabase integration
 │   │   ├── auth.py             ← JWT authentication
-│   │   └── validators.py       ← Input validation
+│   │   ├── validators.py       ← Input validation
+│   │   └── report_generator.py ← Professional PDF reports
 │   ├── tests/
-│   │   └── test_api.py         ← 22 pytest test cases
+│   │   └── test_api.py         ← 28 pytest test cases
 │   └── data/
 │       └── README.md           ← Dataset instructions
 │
+├── streamlit_app.py            ← Interactive dashboard
 ├── frontend/
 │   ├── index.html              ← Main UI
 │   ├── style.css               ← Styling
@@ -63,7 +66,8 @@ Self-harm-detection/
 
 | Layer | Technology |
 |---|---|
-| Backend API | Python, Flask |
+| Primary API | Python, **FastAPI** v2.0 |
+| Backup API | Python, Flask |
 | Machine Learning | Scikit-learn, NLTK |
 | Text Analysis | TF-IDF, VADER Sentiment |
 | Facial Analysis | DeepFace, OpenCV (Real-time webcam) |
@@ -71,8 +75,11 @@ Self-harm-detection/
 | Data Processing | Pandas, NumPy |
 | Database | Supabase PostgreSQL |
 | Authentication | JWT + Bcrypt |
-| Security | Flask-Talisman, Rate Limiting, CORS |
-| Testing | Pytest (22 test cases) |
+| Security | Rate Limiting, CORS, Security Headers |
+| Real-time | WebSocket (Socket.IO) |
+| PDF Reports | ReportLab |
+| Dashboard | Streamlit |
+| Testing | Pytest (28 test cases) |
 | Frontend | HTML5, CSS3, JavaScript |
 | Visualization | Matplotlib, Seaborn |
 | Model Persistence | Joblib |
@@ -89,28 +96,55 @@ Self-harm-detection/
 | F1-Score | 0.92 |
 | CV F1 Score | 0.9218 |
 | Training Samples | 50,000 |
+| Dataset | Kaggle Suicide Detection (232,074 posts) |
 
 ### Confusion Matrix
 ![Confusion Matrix](docs/confusion_matrix.png)
 
 ---
 
-## 📡 API Endpoints
+## 📡 API Endpoints (FastAPI v2.0)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/health` | Check API status |
-| POST | `/api/register` | Register new user |
-| POST | `/api/login` | Login and get JWT token |
-| GET | `/api/profile` | Get user profile [JWT] |
-| POST | `/api/predict` | Predict risk from text |
-| POST | `/api/analyze-face` | Real-time webcam emotion analysis |
-| POST | `/api/analyze-speech` | Live microphone speech analysis |
-| POST | `/api/predict-multimodal` | Combined text+face+speech prediction |
-| GET | `/api/stats` | Session statistics |
-| GET | `/api/monitor` | Drift detection report |
-| GET | `/api/history` | Prediction history from DB |
-| GET | `/api/db-stats` | Database statistics |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/health` | Public | Check API status |
+| POST | `/api/register` | Public | Register new user |
+| POST | `/api/login` | Public | Login and get JWT token |
+| GET | `/api/profile` | JWT | Get user profile |
+| POST | `/api/predict` | JWT | Predict risk from text |
+| POST | `/api/generate-report` | JWT | **Download professional PDF report** |
+| POST | `/api/analyze-face` | JWT | Real-time webcam emotion analysis |
+| POST | `/api/analyze-speech` | JWT | Live microphone speech analysis |
+| POST | `/api/predict-multimodal` | JWT | Combined text+face+speech prediction |
+| GET | `/api/stats` | JWT | Session statistics |
+| GET | `/api/monitor` | JWT | Trend-based drift detection |
+| GET | `/api/history` | JWT | Prediction history from DB |
+| GET | `/api/db-stats` | JWT | Database statistics |
+
+### Swagger UI
+```
+FastAPI Docs : http://127.0.0.1:8000/docs
+FastAPI ReDoc: http://127.0.0.1:8000/redoc
+Flask Docs   : http://127.0.0.1:5000/apidocs
+```
+
+---
+
+## 📄 Professional PDF Report
+
+The system generates clinical-style psychological assessment reports including:
+- **Overall Risk Level** with confidence score
+- **Behavioral Tendencies** identified through AI analysis
+- **Possible Underlying Conditions** with likelihood assessment
+- **Professional Recommendations** (CBT, DBT, crisis support)
+- **Emergency Support Resources** (iCall, Vandrevala, AASRA)
+```json
+POST /api/generate-report
+{
+  "text": "I feel completely hopeless and want to disappear"
+}
+```
+Returns: Downloadable PDF file
 
 ---
 
@@ -133,7 +167,7 @@ POST /api/predict
   "risk_indicators": {
     "text_sentiment": "negative",
     "confidence_level": "high",
-    "severity": "high"
+    "severity": "critical"
   },
   "recommendations": {
     "support_resources": [
@@ -145,48 +179,14 @@ POST /api/predict
 }
 ```
 
-### Real-time Webcam Analysis ✅ WORKING
-```json
-POST /api/analyze-face
-{
-  "use_webcam": true
-}
-```
-**Response:**
-```json
-{
-  "dominant_emotion": "neutral",
-  "emotions": {
-    "angry": 3.36,
-    "disgust": 0.0,
-    "fear": 0.23,
-    "happy": 0.84,
-    "neutral": 88.16,
-    "sad": 7.39,
-    "surprise": 0.02
-  },
-  "facial_risk_score": 0.1342,
-  "risk_level": "LOW"
-}
-```
-
-### Live Microphone Analysis ✅ WORKING
-```json
-POST /api/analyze-speech
-{
-  "use_microphone": true,
-  "duration": 5
-}
-```
-
-### Multimodal Analysis (Text + Webcam + Mic) ✅ WORKING
+### Multimodal with Custom Weights
 ```json
 POST /api/predict-multimodal
 {
   "text": "I feel hopeless",
   "use_webcam": true,
-  "use_microphone": true,
-  "duration": 5
+  "use_microphone": false,
+  "weights": {"text": 0.6, "facial": 0.4, "speech": 0.0}
 }
 ```
 
@@ -195,12 +195,15 @@ POST /api/predict-multimodal
 ## 🔐 Security Features
 
 - ✅ JWT Authentication with 24hr token expiry
-- ✅ Bcrypt password hashing
+- ✅ Bcrypt password hashing (industry standard)
 - ✅ Rate limiting on all endpoints
 - ✅ Security headers (XSS, Clickjacking protection)
-- ✅ CORS configuration
-- ✅ Input validation and sanitization
-- ✅ Environment variables for secrets
+- ✅ CORS configuration (restricted origins)
+- ✅ Input validation with Pydantic models
+- ✅ SQL injection prevention (Supabase ORM)
+- ✅ CSRF protection (JWT stateless)
+- ✅ Environment variables for all secrets
+- ✅ Row Level Security on Supabase tables
 
 ---
 
@@ -210,13 +213,37 @@ cd backend
 python -m pytest tests/test_api.py -v
 ```
 
-**22 test cases covering:**
-- Health endpoint
-- Prediction (high risk, low risk, validation)
-- Authentication (register, login)
-- Database endpoints
+**28 test cases covering:**
+- Health endpoint + WebSocket status
+- Prediction (high risk, low risk, validation, unauthorized)
+- Authentication (register, login, duplicate, missing fields)
+- Database endpoints (stats, history, structure)
 - Preprocessing pipeline
-- Multimodal fusion
+- Multimodal fusion (custom weights, invalid weights)
+- Speech analysis module
+
+---
+
+## 🖥️ Streamlit Dashboard
+
+Interactive dashboard for testing all features:
+```bash
+# Terminal 1 - Start FastAPI
+cd backend
+python main.py
+
+# Terminal 2 - Start Streamlit
+streamlit run streamlit_app.py
+```
+
+**Dashboard Pages:**
+- 🏠 Dashboard — stats + quick analysis + PDF download
+- 📝 Text Analysis — full analysis + PDF report
+- 📷 Facial Analysis — webcam + image upload
+- 🎤 Speech Analysis — microphone recording
+- 🔀 Multimodal — combined analysis
+- 📊 Monitoring — trend alerts, drift detection
+- 📈 History — all predictions from database
 
 ---
 
@@ -250,30 +277,44 @@ cd backend
 python model/train_model.py
 ```
 
-### Step 6: Run the API
+### Step 6: Run FastAPI (Primary)
 ```bash
-python app.py
+cd backend
+python main.py
+# Swagger UI: http://127.0.0.1:8000/docs
 ```
 
-### Step 7: Open Frontend
-Open `frontend/index.html` in browser with API running.
+### Step 7: Run Streamlit Dashboard
+```bash
+streamlit run streamlit_app.py
+# Dashboard: http://localhost:8501
+```
+
+### Step 8: Run Flask (Backup)
+```bash
+cd backend
+python app.py
+# Swagger UI: http://127.0.0.1:5000/apidocs
+```
 
 ---
 
 ## 🗺️ Future Enhancements
 - [ ] Cloud deployment on Render.com
 - [ ] Docker containerization
-- [ ] Real-time WebSocket alerts
 - [ ] Arduino heart rate sensor integration
 - [ ] Mobile PWA application
+- [ ] Google OAuth authentication
+- [ ] Video upload analysis
 
 ---
 
 ## ⚠️ Ethical Considerations
 - This system is a **support tool only** — not a replacement for professional diagnosis
-- Predictions are stored securely in cloud database
+- All predictions stored securely in cloud database with RLS
 - Alert system involves human-in-the-loop decision making
-- All passwords are hashed using bcrypt
+- All passwords hashed using bcrypt
+- PDF reports include mandatory clinical disclaimer
 
 ---
 
@@ -282,7 +323,7 @@ Open `frontend/index.html` in browser with API running.
 | Name | Role |
 |---|---|
 | Avani Upadhyay | Frontend Development, UI/UX |
-| Archit Agrawal | Backend API, ML Model, Database, Security |
+| Archit Agrawal | Backend API, ML Model, FastAPI, Database, Security, PDF Reports |
 
 ---
 
