@@ -4,19 +4,22 @@ JWT Authentication module for Self Harm Detection API.
 Handles user registration, login and token verification.
 Uses bcrypt for secure password hashing.
 Users stored in Supabase PostgreSQL database.
+Works with both Flask and FastAPI.
 """
 
-from flask_jwt_extended import JWTManager, create_access_token
-from datetime import timedelta
+from datetime import timedelta, datetime
 import bcrypt
 import os
 from dotenv import load_dotenv
 from supabase import create_client
+from jose import jwt
 
 load_dotenv('D:\\selfharm-project\\backend\\.env')
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL  = os.getenv("SUPABASE_URL")
+SUPABASE_KEY  = os.getenv("SUPABASE_KEY")
+JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
+JWT_ALGORITHM = "HS256"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -35,7 +38,6 @@ def verify_password(password, hashed):
 def register_user(username, password):
     """Register a new user in Supabase."""
     try:
-        # Check if user exists
         existing = supabase.table("Users")\
             .select("username")\
             .eq("username", username)\
@@ -44,9 +46,8 @@ def register_user(username, password):
         if existing.data:
             return {"success": False, "error": "Username already exists"}
 
-        # Hash password and store
         hashed = hash_password(password)
-        result = supabase.table("Users").insert({
+        supabase.table("Users").insert({
             "username": username,
             "password": hashed,
             "role":     "user"
@@ -59,7 +60,7 @@ def register_user(username, password):
 
 
 def login_user(username, password):
-    """Login user and return JWT token."""
+    """Login user and return JWT token. Works with Flask and FastAPI."""
     try:
         result = supabase.table("Users")\
             .select("*")\
@@ -74,10 +75,13 @@ def login_user(username, password):
         if not verify_password(password, user['password']):
             return {"success": False, "error": "Invalid password"}
 
-        token = create_access_token(
-            identity=username,
-            expires_delta=timedelta(hours=24)
-        )
+        token = jwt.encode({
+            "sub":   username,
+            "fresh": False,
+            "iat":   datetime.utcnow(),
+            "exp":   datetime.utcnow() + timedelta(hours=24),
+            "type":  "access"
+        }, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
         return {
             "success":      True,
@@ -92,11 +96,8 @@ def login_user(username, password):
 
 
 def setup_jwt(app):
-    """Configure JWT with the Flask app."""
-    app.config['JWT_SECRET_KEY'] = os.getenv(
-        'JWT_SECRET_KEY',
-        'selfharm-detection-secret-key-2026'
-    )
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
-    jwt = JWTManager(app)
-    return jwt
+    """Configure JWT with the Flask app (Flask only)."""
+    from flask_jwt_extended import JWTManager
+    app.config['JWT_SECRET_KEY']              = JWT_SECRET
+    app.config['JWT_ACCESS_TOKEN_EXPIRES']    = timedelta(hours=24)
+    return JWTManager(app)
