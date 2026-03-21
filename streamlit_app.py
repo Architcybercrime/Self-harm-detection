@@ -53,7 +53,6 @@ def api_get(endpoint):
 
 
 def download_report(text):
-    """Generate and return PDF report bytes."""
     try:
         r = requests.post(
             f"{API_URL}/api/generate-report",
@@ -180,6 +179,7 @@ if not st.session_state.logged_in:
             - 🔒 Webcam & microphone analysis
             - 🔒 Video upload analysis
             - 🔒 Multimodal analysis
+            - 🔒 API key management
             """)
             if st.button("Continue as Guest →", type="primary"):
                 st.session_state.logged_in = True
@@ -219,6 +219,7 @@ with st.sidebar:
             "🔀 Multimodal Analysis",
             "📊 Monitoring",
             "📈 History",
+            "🔑 API Keys",
         ])
 
     st.divider()
@@ -534,10 +535,7 @@ elif page == "🎬 Video Analysis":
 
             if code == 200 and data.get('success'):
                 st.divider()
-
-                # Overall risk
                 overall_risk = data.get('overall_risk_level', 'UNKNOWN')
-                alert        = data.get('alert_triggered', False)
 
                 if overall_risk == 'HIGH':
                     st.error(f"🚨 **Overall Risk Level: {overall_risk}**")
@@ -550,7 +548,6 @@ elif page == "🎬 Video Analysis":
                 st.info(data.get('message', ''))
                 st.divider()
 
-                # Video metadata
                 meta = data.get('video_metadata', {})
                 st.subheader("📊 Video Information")
                 col1, col2, col3, col4 = st.columns(4)
@@ -559,7 +556,6 @@ elif page == "🎬 Video Analysis":
                 col3.metric("Resolution",      meta.get('resolution', 'N/A'))
                 col4.metric("Frames Analyzed", meta.get('analyzed_frames', 0))
 
-                # Facial analysis results
                 facial = data.get('facial_analysis')
                 if facial:
                     st.divider()
@@ -570,23 +566,20 @@ elif page == "🎬 Video Analysis":
                     col2.metric("Avg Risk Score",     f"{facial.get('avg_risk_score', 0):.4f}")
                     col3.metric("High Risk Frames",   facial.get('high_risk_frames', 0))
 
-                    # Emotion breakdown
                     avg_emotions = facial.get('avg_emotions', {})
                     if avg_emotions:
-                        st.subheader("Emotion Breakdown (Average across video)")
+                        st.subheader("Emotion Breakdown")
                         for emotion, score in sorted(avg_emotions.items(),
                                                      key=lambda x: x[1], reverse=True):
                             st.progress(min(score/100, 1.0),
                                        text=f"{emotion.capitalize()}: {score:.1f}%")
 
-                    # Frame timeline
                     timeline = facial.get('frame_timeline', [])
                     if timeline:
-                        st.subheader("📈 Frame Timeline (First 10 samples)")
+                        st.subheader("📈 Frame Timeline")
                         import pandas as pd
                         df = pd.DataFrame(timeline)
                         st.dataframe(df, use_container_width=True)
-
             else:
                 st.error(f"Error: {data.get('detail', data.get('error', 'Video analysis failed'))}")
     else:
@@ -796,3 +789,132 @@ elif page == "📈 History":
             st.info("No predictions yet. Run some analyses first!")
     else:
         st.error("Could not fetch history")
+
+
+# ── API KEYS ─────────────────────────────────────────
+elif page == "🔑 API Keys":
+    st.title("🔑 API Key Management")
+    st.markdown("Generate and manage your personal API key for external integrations")
+    st.divider()
+
+    st.info("""
+    **What is an API Key?**
+    - A personal key that lets you access the API without logging in every time
+    - Use it in any app, script, or tool
+    - Format: `Authorization: Bearer shd_YOUR_KEY`
+    - Starts with `shd_` prefix
+    """)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("🔍 Your Current Key")
+        if st.button("View My API Key", use_container_width=True):
+            data, code = api_get("/api/keys/my-key")
+            if code == 200 and data.get('success'):
+                st.success("✅ Active API Key found!")
+                st.code(data['api_key'], language=None)
+                st.caption(f"Created: {str(data.get('created_at', 'N/A'))[:19]}")
+                st.caption(f"Last used: {data.get('last_used', 'Never')}")
+            else:
+                st.warning(data.get('message', 'No active key found'))
+
+    with col2:
+        st.subheader("⚡ Generate New Key")
+        st.warning("Generating a new key will revoke your existing one!")
+        if st.button("🔑 Generate New API Key", type="primary", use_container_width=True):
+            data, code = api_post("/api/keys/generate", {})
+            if code == 200 and data.get('success'):
+                st.success("✅ New API Key generated!")
+                st.code(data['api_key'], language=None)
+                st.info("📋 Copy this key now and save it safely!")
+                st.code(f"curl example:\n{data.get('curl_example', '')}", language="bash")
+            else:
+                st.error("Failed to generate key")
+
+    st.divider()
+    st.subheader("📋 How to Use Your API Key")
+
+    tab1, tab2, tab3 = st.tabs(["🐍 Python", "💻 curl", "🌐 JavaScript"])
+
+    with tab1:
+        st.code("""
+import requests
+
+API_KEY = "shd_your_api_key_here"
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+# Text analysis
+response = requests.post(
+    "http://127.0.0.1:8000/api/predict",
+    json={"text": "I feel hopeless"},
+    headers=headers
+)
+print(response.json())
+
+# Generate PDF report
+response = requests.post(
+    "http://127.0.0.1:8000/api/generate-report",
+    json={"text": "I feel hopeless"},
+    headers=headers
+)
+with open("report.pdf", "wb") as f:
+    f.write(response.content)
+        """, language="python")
+
+    with tab2:
+        st.code("""
+# Text analysis
+curl -X POST http://127.0.0.1:8000/api/predict \\
+  -H "Authorization: Bearer shd_your_api_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"text": "I feel hopeless"}'
+
+# Generate PDF report
+curl -X POST http://127.0.0.1:8000/api/generate-report \\
+  -H "Authorization: Bearer shd_your_api_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{"text": "I feel hopeless"}' \\
+  --output report.pdf
+        """, language="bash")
+
+    with tab3:
+        st.code("""
+const API_KEY = "shd_your_api_key_here";
+
+const response = await fetch("http://127.0.0.1:8000/api/predict", {
+    method: "POST",
+    headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ text: "I feel hopeless" })
+});
+
+const data = await response.json();
+console.log(data);
+        """, language="javascript")
+
+    st.divider()
+    st.subheader("🗑️ Revoke Key")
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("❌ Revoke My API Key", use_container_width=True):
+            try:
+                token = st.session_state.get('token', '')
+                r = requests.delete(
+                    f"{API_URL}/api/keys/revoke",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                data = r.json()
+                if data.get('success'):
+                    st.success("✅ API key revoked successfully!")
+                else:
+                    st.error("Failed to revoke key")
+            except Exception as e:
+                st.error(str(e))
+    with col2:
+        st.warning("⚠️ Revoking will immediately disable your current API key!")
