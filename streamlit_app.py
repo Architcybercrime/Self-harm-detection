@@ -178,6 +178,7 @@ if not st.session_state.logged_in:
             - 🔒 Download PDF reports
             - 🔒 Save prediction history
             - 🔒 Webcam & microphone analysis
+            - 🔒 Video upload analysis
             - 🔒 Multimodal analysis
             """)
             if st.button("Continue as Guest →", type="primary"):
@@ -214,6 +215,7 @@ with st.sidebar:
             "📝 Text Analysis",
             "📷 Facial Analysis",
             "🎤 Speech Analysis",
+            "🎬 Video Analysis",
             "🔀 Multimodal Analysis",
             "📊 Monitoring",
             "📈 History",
@@ -486,6 +488,124 @@ elif page == "🎤 Speech Analysis":
                 st.write(data['interpretation'])
         else:
             st.error(f"Error: {data.get('error', 'Recording failed')}")
+
+
+# ── VIDEO ANALYSIS ───────────────────────────────────
+elif page == "🎬 Video Analysis":
+    st.title("🎬 Video Analysis")
+    st.markdown("Upload a video to analyze facial expressions frame by frame")
+    st.divider()
+
+    st.info("""
+    📹 **How it works:**
+    - Upload any video (MP4, AVI, MOV, MKV, WEBM)
+    - System samples frames every 2 seconds
+    - Analyzes facial emotions in each frame
+    - Generates overall risk assessment
+    - Provides frame-by-frame timeline
+    """)
+
+    uploaded_video = st.file_uploader(
+        "Upload Video File",
+        type=['mp4', 'avi', 'mov', 'mkv', 'webm'],
+        help="Max recommended size: 50MB"
+    )
+
+    if uploaded_video:
+        st.video(uploaded_video)
+        st.info(f"📁 File: **{uploaded_video.name}** | Size: **{uploaded_video.size/1024/1024:.1f} MB**")
+
+        if st.button("🎬 Analyze Video", type="primary"):
+            with st.spinner("Uploading and analyzing video... This may take a few minutes..."):
+                try:
+                    token = st.session_state.get('token', '')
+                    response = requests.post(
+                        f"{API_URL}/api/analyze-video",
+                        files={"file": (uploaded_video.name, uploaded_video.getvalue(),
+                                       uploaded_video.type)},
+                        headers={"Authorization": f"Bearer {token}"},
+                        timeout=300
+                    )
+                    data = response.json()
+                    code = response.status_code
+                except Exception as e:
+                    data = {"error": str(e)}
+                    code = 500
+
+            if code == 200 and data.get('success'):
+                st.divider()
+
+                # Overall risk
+                overall_risk = data.get('overall_risk_level', 'UNKNOWN')
+                alert        = data.get('alert_triggered', False)
+
+                if overall_risk == 'HIGH':
+                    st.error(f"🚨 **Overall Risk Level: {overall_risk}**")
+                    st.error("**Support Resources:**\n- iCall: 9152987821\n- Vandrevala Foundation: 1860-2662-345\n- AASRA: 9820466627")
+                elif overall_risk == 'MEDIUM':
+                    st.warning(f"⚠️ **Overall Risk Level: {overall_risk}**")
+                else:
+                    st.success(f"✅ **Overall Risk Level: {overall_risk}**")
+
+                st.info(data.get('message', ''))
+                st.divider()
+
+                # Video metadata
+                meta = data.get('video_metadata', {})
+                st.subheader("📊 Video Information")
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Duration",        f"{meta.get('duration_seconds', 0):.1f}s")
+                col2.metric("FPS",             f"{meta.get('fps', 0):.1f}")
+                col3.metric("Resolution",      meta.get('resolution', 'N/A'))
+                col4.metric("Frames Analyzed", meta.get('analyzed_frames', 0))
+
+                # Facial analysis results
+                facial = data.get('facial_analysis')
+                if facial:
+                    st.divider()
+                    st.subheader("😊 Facial Emotion Analysis")
+
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Dominant Emotion",  facial.get('dominant_emotion', 'N/A').title())
+                    col2.metric("Avg Risk Score",     f"{facial.get('avg_risk_score', 0):.4f}")
+                    col3.metric("High Risk Frames",   facial.get('high_risk_frames', 0))
+
+                    # Emotion breakdown
+                    avg_emotions = facial.get('avg_emotions', {})
+                    if avg_emotions:
+                        st.subheader("Emotion Breakdown (Average across video)")
+                        for emotion, score in sorted(avg_emotions.items(),
+                                                     key=lambda x: x[1], reverse=True):
+                            st.progress(min(score/100, 1.0),
+                                       text=f"{emotion.capitalize()}: {score:.1f}%")
+
+                    # Frame timeline
+                    timeline = facial.get('frame_timeline', [])
+                    if timeline:
+                        st.subheader("📈 Frame Timeline (First 10 samples)")
+                        import pandas as pd
+                        df = pd.DataFrame(timeline)
+                        st.dataframe(df, use_container_width=True)
+
+            else:
+                st.error(f"Error: {data.get('detail', data.get('error', 'Video analysis failed'))}")
+    else:
+        st.markdown("""
+        ### 📋 Supported Formats
+        | Format | Extension |
+        |--------|-----------|
+        | MP4 Video | .mp4 |
+        | AVI Video | .avi |
+        | QuickTime | .mov |
+        | Matroska  | .mkv |
+        | WebM      | .webm |
+
+        ### 💡 Tips for Best Results
+        - Ensure good lighting in the video
+        - Face should be clearly visible
+        - Shorter videos (< 2 mins) process faster
+        - Front-facing camera videos work best
+        """)
 
 
 # ── MULTIMODAL ANALYSIS ──────────────────────────────
