@@ -20,14 +20,14 @@ warnings.filterwarnings('ignore')
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse, FileResponse
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
-import joblib, sys, datetime, uuid
+import joblib, sys, datetime, uuid, shutil
 import numpy as np
 from jose import JWTError, jwt
 from dotenv import load_dotenv
@@ -112,6 +112,7 @@ app = FastAPI(
 - Supabase PostgreSQL database
 - JWT Authentication
 - **Professional PDF Report Generation**
+- **Video Upload Analysis**
 
 ### Authentication
 Use the **Authorize** button with: `Bearer YOUR_JWT_TOKEN`
@@ -293,10 +294,7 @@ async def predict(data: TextInput,
 @app.post("/api/generate-report", tags=["Report"])
 async def generate_report_endpoint(data: TextInput,
                                     current_user: str = Depends(verify_token)):
-    """
-    Generate a professional psychological risk assessment PDF report.
-    Returns a downloadable PDF file.
-    """
+    """Generate a professional psychological risk assessment PDF report."""
     from utils.report_generator import generate_report as gen_report
 
     prediction_data = run_prediction(data.text)
@@ -315,6 +313,63 @@ async def generate_report_endpoint(data: TextInput,
             "Content-Disposition": f"attachment; filename=risk_assessment_{report_id}.pdf"
         }
     )
+
+
+# ── VIDEO ANALYSIS ───────────────────────────────────
+@app.post("/api/analyze-video", tags=["Multimodal"])
+async def analyze_video_endpoint(
+    current_user: str = Depends(verify_token),
+    file: UploadFile = File(...)
+):
+    """
+    Upload and analyze a video file for self-harm risk indicators.
+    Analyzes facial expressions frame by frame.
+    Supported formats: MP4, AVI, MOV, MKV, WEBM
+    """
+    from utils.video_analysis import analyze_video
+
+    allowed_types = [
+        'video/mp4', 'video/avi', 'video/quicktime',
+        'video/x-msvideo', 'video/x-matroska', 'video/webm'
+    ]
+
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type '{file.content_type}'. Use MP4, AVI, MOV, MKV or WEBM"
+        )
+
+    temp_path = f"temp_video_{uuid.uuid4().hex[:8]}.mp4"
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        result = analyze_video(temp_path)
+
+        # Save to database if analysis successful
+        if result.get('success') and result.get('overall_risk_level') != 'UNKNOWN':
+            save_prediction(
+                text_input = f"Video: {file.filename}",
+                risk_level = result.get('overall_risk_level', 'LOW'),
+                confidence = result.get('facial_analysis', {}).get('avg_risk_score', 0),
+                sentiment  = 0.0,
+                modality   = "video",
+                alert      = result.get('alert_triggered', False)
+            )
+
+            if result.get('alert_triggered'):
+                await sio.emit('high_risk_alert', {
+                    "risk_level": result.get('overall_risk_level'),
+                    "modality":   "video",
+                    "message":    "High risk detected in video analysis",
+                    "timestamp":  datetime.datetime.now().isoformat()
+                })
+
+        return result
+
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 # ── STATS ────────────────────────────────────────────
@@ -453,7 +508,8 @@ if __name__ == '__main__':
     print("  Docs:  http://127.0.0.1:8000/docs")
     print("  ReDoc: http://127.0.0.1:8000/redoc")
     print("  Endpoints:")
-    print("    POST /api/generate-report [JWT] ← NEW!")
+    print("    POST /api/generate-report  [JWT] ← PDF Report")
+    print("    POST /api/analyze-video    [JWT] ← Video Upload")
     print("="*50)
     uvicorn.run("main:socket_app", host="0.0.0.0",
                 port=8000, reload=True)
