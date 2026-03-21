@@ -145,6 +145,9 @@
       <div class="auth-label">// SECURE ACCESS</div>
       <div class="auth-title">SIGN IN</div>
 
+      <!-- Alert box: hidden by default, shown on error or success -->
+      <div id="alertBox" style="display:none; border-radius:0; font-size:13px; padding:12px 16px; margin-bottom:20px; border-left:3px solid; "></div>
+
       <form id="loginForm" novalidate>
         <div class="mb-4">
           <label class="form-label" for="username">Username</label>
@@ -161,7 +164,12 @@
             </span>
           </div>
         </div>
-        <button type="submit" class="btn-ss mt-2">+ SIGN IN</button>
+        <button type="submit" class="btn-ss mt-2" id="loginBtn">
+          <span id="btnText">+ SIGN IN</span>
+          <span id="btnSpinner" style="display:none">
+            <span class="spinner-border spinner-border-sm" role="status"></span> SIGNING IN...
+          </span>
+        </button>
       </form>
 
       <hr class="auth-divider">
@@ -178,7 +186,27 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // UI only — toggle password visibility
+    /* ─────────────────────────────────────────────
+       STEP 1: API base URL — this is Archit's backend
+       All requests go to http://127.0.0.1:5000/api
+    ───────────────────────────────────────────── */
+    const API = 'http://127.0.0.1:5000/api';
+
+    /* ─────────────────────────────────────────────
+       STEP 2: If user is already logged in
+       (token exists in localStorage from a previous
+       login), skip this page and go straight to
+       the dashboard — no need to log in again.
+    ───────────────────────────────────────────── */
+    if (localStorage.getItem('token')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    /* ─────────────────────────────────────────────
+       STEP 3: Toggle password show/hide
+       When eye icon is clicked, switches the input
+       type between "password" and "text"
+    ───────────────────────────────────────────── */
     function togglePassword(fieldId, iconWrap) {
       const field = document.getElementById(fieldId);
       const icon  = iconWrap.querySelector('i');
@@ -191,9 +219,95 @@
       }
     }
 
-    // API integration will be added in next commit
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+    /* ─────────────────────────────────────────────
+       STEP 4: Show alert message
+       type = 'error' → red, type = 'success' → green
+    ───────────────────────────────────────────── */
+    function showAlert(msg, type = 'error') {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.style.display = 'block';
+      if (type === 'error') {
+        box.style.background = 'rgba(194,0,47,0.15)';
+        box.style.color      = '#ff6b8a';
+        box.style.borderColor = '#C2002F';
+      } else {
+        box.style.background = 'rgba(42,138,74,0.15)';
+        box.style.color      = '#6fcf97';
+        box.style.borderColor = '#2A8A4A';
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+       STEP 5: Show/hide spinner on button
+       While waiting for API response, button shows
+       a spinner so user knows something is happening
+    ───────────────────────────────────────────── */
+    function setLoading(on) {
+      document.getElementById('loginBtn').disabled   = on;
+      document.getElementById('btnText').style.display    = on ? 'none'  : 'inline';
+      document.getElementById('btnSpinner').style.display = on ? 'inline': 'none';
+    }
+
+    /* ─────────────────────────────────────────────
+       STEP 6: The actual login — runs when form submitted
+       
+       What happens:
+       1. Read username + password from inputs
+       2. Validate they are not empty
+       3. Send POST request to /api/login with JSON body
+       4. If backend returns a token → save it to
+          localStorage so every future page can use it
+       5. Save username too (for display on dashboard)
+       6. Redirect to dashboard.html
+       7. If backend returns error → show red message
+       8. If backend is offline → show connection error
+    ───────────────────────────────────────────── */
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault(); // stop page from refreshing
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      // Basic validation before even hitting the API
+      if (!username || !password) {
+        showAlert('Please enter both username and password.');
+        return;
+      }
+
+      setLoading(true);
+      document.getElementById('alertBox').style.display = 'none';
+
+      try {
+        // Send login request to Archit's backend
+        const response = await fetch(`${API}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.access_token) {
+          // SUCCESS: save JWT token to localStorage
+          // This token is sent with every future API request
+          // to prove the user is logged in
+          localStorage.setItem('token',    data.access_token);
+          localStorage.setItem('username', username);
+
+          showAlert('Login successful! Redirecting...', 'success');
+          setTimeout(() => window.location.href = 'dashboard.html', 800);
+        } else {
+          // Backend returned an error (wrong password etc.)
+          showAlert(data.message || data.error || 'Invalid username or password.');
+        }
+
+      } catch (err) {
+        // fetch() itself failed — backend is probably not running
+        showAlert('Cannot connect to server. Make sure the backend is running on port 5000.');
+      } finally {
+        setLoading(false);
+      }
     });
   </script>
 </body>
