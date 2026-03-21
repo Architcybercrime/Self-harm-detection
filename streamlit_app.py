@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import time
+import os
 
 # ── CONFIG ───────────────────────────────────────────
 API_URL = "http://127.0.0.1:8000"
@@ -67,6 +68,20 @@ def download_report(text):
         return None, False
 
 
+def make_jwt_token(username):
+    """Create JWT token for a user."""
+    from jose import jwt as jose_jwt
+    import datetime
+    JWT_SECRET = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
+    return jose_jwt.encode({
+        "sub":   username,
+        "fresh": False,
+        "iat":   datetime.datetime.utcnow(),
+        "exp":   datetime.datetime.utcnow() + datetime.timedelta(hours=24),
+        "type":  "access"
+    }, JWT_SECRET, algorithm="HS256")
+
+
 def show_risk(data):
     rl   = data.get('risk_level', 'UNKNOWN')
     conf = data.get('confidence', data.get('final_risk_score', 0))
@@ -121,7 +136,7 @@ if not st.session_state.logged_in:
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        tab1, tab2, tab3 = st.tabs(["🔐 Login", "📝 Register", "👤 Guest Access"])
+        tab1, tab2, tab3, tab4 = st.tabs(["🔐 Login", "📝 Register", "👤 Guest Access", "🔵 Google"])
 
         with tab1:
             st.subheader("Login")
@@ -187,6 +202,64 @@ if not st.session_state.logged_in:
                 st.session_state.is_guest  = True
                 st.session_state.token     = ""
                 st.rerun()
+
+        with tab4:
+            st.subheader("🔵 Sign in with Google")
+            st.info("Use your Google account to sign in instantly — no password needed!")
+
+            try:
+                from streamlit_google_auth import Authenticate
+
+                GOOGLE_CLIENT_ID = os.getenv(
+                    'GOOGLE_CLIENT_ID',
+                    '693747809200-i2v7cksqr6ehld7l0jt7evlanhe0canf.apps.googleusercontent.com'
+                )
+                GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+
+                authenticator = Authenticate(
+                    secret_credentials_path = None,
+                    cookie_name             = 'selfharm_google_auth',
+                    cookie_key              = 'selfharm_secret_key_2026',
+                    redirect_uri            = 'http://localhost:8501',
+                    client_id               = GOOGLE_CLIENT_ID,
+                    client_secret           = GOOGLE_CLIENT_SECRET
+                )
+
+                authenticator.check_authentification()
+
+                if st.session_state.get('connected'):
+                    user_info = st.session_state.get('user_info', {})
+                    email     = user_info.get('email', '')
+                    name      = user_info.get('name', 'Google User')
+                    picture   = user_info.get('picture', '')
+
+                    col_a, col_b = st.columns([1, 3])
+                    with col_a:
+                        if picture:
+                            st.image(picture, width=60)
+                    with col_b:
+                        st.success(f"✅ {name}")
+                        st.caption(email)
+
+                    if st.button("Continue to Dashboard →", type="primary"):
+                        username_clean = name.replace(' ', '_').lower()
+                        token = make_jwt_token(username_clean)
+                        st.session_state.token     = token
+                        st.session_state.username  = name
+                        st.session_state.logged_in = True
+                        st.session_state.is_guest  = False
+                        st.rerun()
+
+                    if st.button("Sign out from Google"):
+                        authenticator.logout()
+                        st.rerun()
+                else:
+                    st.markdown("Click the button below to sign in with your Google account:")
+                    authenticator.login()
+
+            except Exception as e:
+                st.error(f"Google Sign In setup error: {str(e)}")
+                st.info("Make sure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set in .env file")
 
     st.stop()
 
@@ -828,7 +901,6 @@ elif page == "🔑 API Keys":
                 st.success("✅ New API Key generated!")
                 st.code(data['api_key'], language=None)
                 st.info("📋 Copy this key now and save it safely!")
-                st.code(f"curl example:\n{data.get('curl_example', '')}", language="bash")
             else:
                 st.error("Failed to generate key")
 
@@ -847,38 +919,20 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# Text analysis
 response = requests.post(
     "http://127.0.0.1:8000/api/predict",
     json={"text": "I feel hopeless"},
     headers=headers
 )
 print(response.json())
-
-# Generate PDF report
-response = requests.post(
-    "http://127.0.0.1:8000/api/generate-report",
-    json={"text": "I feel hopeless"},
-    headers=headers
-)
-with open("report.pdf", "wb") as f:
-    f.write(response.content)
         """, language="python")
 
     with tab2:
         st.code("""
-# Text analysis
 curl -X POST http://127.0.0.1:8000/api/predict \\
   -H "Authorization: Bearer shd_your_api_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{"text": "I feel hopeless"}'
-
-# Generate PDF report
-curl -X POST http://127.0.0.1:8000/api/generate-report \\
-  -H "Authorization: Bearer shd_your_api_key_here" \\
-  -H "Content-Type: application/json" \\
-  -d '{"text": "I feel hopeless"}' \\
-  --output report.pdf
         """, language="bash")
 
     with tab3:
@@ -893,7 +947,6 @@ const response = await fetch("http://127.0.0.1:8000/api/predict", {
     },
     body: JSON.stringify({ text: "I feel hopeless" })
 });
-
 const data = await response.json();
 console.log(data);
         """, language="javascript")
