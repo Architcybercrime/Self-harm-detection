@@ -4,8 +4,8 @@
 # CSRF Protection: JWT tokens prevent CSRF attacks (stateless auth)
 # Password Hashing: bcrypt with salt rounds
 # Rate Limiting: slowapi on all endpoints
-# Authentication: JWT Bearer tokens required
-# Authorization: Depends(get_current_user) on all protected endpoints
+# Authentication: JWT Bearer tokens + API Keys supported
+# Authorization: Depends(verify_token) on all protected endpoints
 # Input Validation: Pydantic models validate all inputs automatically
 # CORS: Restricted to specific origins
 # Security Headers: Via middleware
@@ -27,10 +27,11 @@ from fastapi.responses import JSONResponse, FileResponse
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
-import joblib, sys, datetime, uuid, shutil
+import joblib, sys, datetime, uuid, shutil, secrets
 import numpy as np
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+from supabase import create_client
 
 load_dotenv('D:\\selfharm-project\\backend\\.env')
 
@@ -46,6 +47,13 @@ from utils.auth import register_user, login_user
 # ── CONSTANTS ────────────────────────────────────────
 JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
 JWT_ALGORITHM = "HS256"
+SUPABASE_URL  = os.getenv("SUPABASE_URL")
+SUPABASE_KEY  = os.getenv("SUPABASE_KEY")
+
+
+def get_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 # ── PYDANTIC MODELS ──────────────────────────────────
 class TextInput(BaseModel):
@@ -110,12 +118,16 @@ app = FastAPI(
 - Multimodal fusion with dynamic weights
 - Real-time WebSocket alerts
 - Supabase PostgreSQL database
-- JWT Authentication
+- JWT Authentication + API Key System
 - **Professional PDF Report Generation**
 - **Video Upload Analysis**
 
 ### Authentication
-Use the **Authorize** button with: `Bearer YOUR_JWT_TOKEN`
+Two methods supported:
+1. **JWT Token**: `Bearer YOUR_JWT_TOKEN`
+2. **API Key**: `Bearer shd_YOUR_API_KEY`
+
+Get your API key from `POST /api/keys/generate`
     """,
     version     = "2.0.0",
     contact     = {
@@ -130,7 +142,7 @@ app.add_middleware(
     allow_origins     = ["http://localhost:3000", "http://127.0.0.1:8000",
                          "http://localhost:5000", "http://localhost:8501"],
     allow_credentials = True,
-    allow_methods     = ["GET", "POST", "OPTIONS"],
+    allow_methods     = ["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers     = ["Content-Type", "Authorization"],
 )
 
@@ -165,21 +177,49 @@ tfidf = joblib.load('model/tfidf_vectorizer.pkl')
 
 prediction_log = []
 
-# ── JWT AUTH ─────────────────────────────────────────
+# ── JWT + API KEY AUTH ────────────────────────────────
 security = HTTPBearer()
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+
+    # Check if it's an API Key (starts with shd_)
+    if token.startswith('shd_'):
+        supabase = get_supabase()
+        try:
+            result = supabase.table("ApiKeys")\
+                .select("username")\
+                .eq("api_key", token)\
+                .eq("is_active", True)\
+                .execute()
+
+            if not result.data:
+                raise HTTPException(status_code=401, detail="Invalid or inactive API key")
+
+            username = result.data[0]['username']
+
+            # Update last_used timestamp
+            supabase.table("ApiKeys")\
+                .update({"last_used": datetime.datetime.now().isoformat()})\
+                .eq("api_key", token)\
+                .execute()
+
+            return username
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="API key verification failed")
+
+    # Otherwise verify as JWT token
     try:
-        payload = jwt.decode(credentials.credentials,
-                             JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload  = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         username = payload.get("sub")
         if not username:
             raise HTTPException(status_code=401, detail="Invalid token")
         return username
     except JWTError:
-        raise HTTPException(status_code=401,
-                            detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 def run_prediction(text):
@@ -236,7 +276,7 @@ def health():
         "framework": "FastAPI",
         "accuracy":  "92.2%",
         "database":  "Supabase PostgreSQL",
-        "auth":      "JWT enabled",
+        "auth":      "JWT + API Keys enabled",
         "websocket": "enabled",
         "timestamp": datetime.datetime.now().isoformat()
     }
@@ -321,11 +361,7 @@ async def analyze_video_endpoint(
     current_user: str = Depends(verify_token),
     file: UploadFile = File(...)
 ):
-    """
-    Upload and analyze a video file for self-harm risk indicators.
-    Analyzes facial expressions frame by frame.
-    Supported formats: MP4, AVI, MOV, MKV, WEBM
-    """
+    """Upload and analyze a video file for self-harm risk indicators."""
     from utils.video_analysis import analyze_video
 
     allowed_types = [
@@ -336,7 +372,7 @@ async def analyze_video_endpoint(
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type '{file.content_type}'. Use MP4, AVI, MOV, MKV or WEBM"
+            detail=f"Invalid file type. Use MP4, AVI, MOV, MKV or WEBM"
         )
 
     temp_path = f"temp_video_{uuid.uuid4().hex[:8]}.mp4"
@@ -346,7 +382,6 @@ async def analyze_video_endpoint(
 
         result = analyze_video(temp_path)
 
-        # Save to database if analysis successful
         if result.get('success') and result.get('overall_risk_level') != 'UNKNOWN':
             save_prediction(
                 text_input = f"Video: {file.filename}",
@@ -370,6 +405,89 @@ async def analyze_video_endpoint(
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+
+# ── API KEY MANAGEMENT ───────────────────────────────
+@app.post("/api/keys/generate", tags=["API Keys"])
+def generate_api_key(current_user: str = Depends(verify_token)):
+    """
+    Generate a personal API key for external integrations.
+    Use this key instead of JWT token for direct API access.
+    Format: Bearer shd_YOUR_KEY
+    """
+    supabase = get_supabase()
+    api_key  = f"shd_{secrets.token_urlsafe(32)}"
+
+    try:
+        # Deactivate old keys
+        supabase.table("ApiKeys")\
+            .update({"is_active": False})\
+            .eq("username", current_user)\
+            .execute()
+
+        # Insert new key
+        supabase.table("ApiKeys").insert({
+            "username":  current_user,
+            "api_key":   api_key,
+            "is_active": True
+        }).execute()
+
+        return {
+            "success":    True,
+            "api_key":    api_key,
+            "username":   current_user,
+            "message":    "API key generated successfully!",
+            "usage":      f"Authorization: Bearer {api_key}",
+            "curl_example": f'curl -X POST http://127.0.0.1:8000/api/predict -H "Authorization: Bearer {api_key}" -H "Content-Type: application/json" -d \'{{"text": "your text here"}}\''
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/keys/my-key", tags=["API Keys"])
+def get_my_api_key(current_user: str = Depends(verify_token)):
+    """Get your current active API key."""
+    supabase = get_supabase()
+
+    try:
+        result = supabase.table("ApiKeys")\
+            .select("*")\
+            .eq("username", current_user)\
+            .eq("is_active", True)\
+            .execute()
+
+        if not result.data:
+            return {
+                "success": False,
+                "message": "No active API key. Use POST /api/keys/generate to create one."
+            }
+
+        key_data = result.data[0]
+        return {
+            "success":    True,
+            "api_key":    key_data['api_key'],
+            "created_at": key_data['created_at'],
+            "last_used":  key_data['last_used'],
+            "is_active":  key_data['is_active']
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/keys/revoke", tags=["API Keys"])
+def revoke_api_key(current_user: str = Depends(verify_token)):
+    """Revoke your current active API key."""
+    supabase = get_supabase()
+
+    try:
+        supabase.table("ApiKeys")\
+            .update({"is_active": False})\
+            .eq("username", current_user)\
+            .execute()
+
+        return {"success": True, "message": "API key revoked successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── STATS ────────────────────────────────────────────
@@ -508,8 +626,11 @@ if __name__ == '__main__':
     print("  Docs:  http://127.0.0.1:8000/docs")
     print("  ReDoc: http://127.0.0.1:8000/redoc")
     print("  Endpoints:")
-    print("    POST /api/generate-report  [JWT] ← PDF Report")
-    print("    POST /api/analyze-video    [JWT] ← Video Upload")
+    print("    POST /api/generate-report  [JWT/Key] ← PDF Report")
+    print("    POST /api/analyze-video    [JWT/Key] ← Video Upload")
+    print("    POST /api/keys/generate    [JWT/Key] ← Get API Key")
+    print("    GET  /api/keys/my-key      [JWT/Key] ← View API Key")
+    print("    DELETE /api/keys/revoke    [JWT/Key] ← Revoke Key")
     print("="*50)
     uvicorn.run("main:socket_app", host="0.0.0.0",
                 port=8000, reload=True)
