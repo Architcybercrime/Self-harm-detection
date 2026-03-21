@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafeSignal — Register</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --ss-red: #C2002F;
+      --ss-dark: #0D0D0D;
+    }
+    body {
+      background: var(--ss-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .ss-topbar {
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .ss-logo-box {
+      width: 48px; height: 48px;
+      border: 1px solid rgba(255,255,255,0.15);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .ss-logo-box .top { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+    .ss-logo-box .bot { font-size: 13px; font-weight: 700; color: #fff; }
+    .ss-logo-box .bot span { color: var(--ss-red); }
+    .ss-brand { color: rgba(255,255,255,0.4); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; margin-left: 4px; }
+    .auth-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .auth-card {
+      background: #161616;
+      border: 1px solid rgba(255,255,255,0.08);
+      width: 100%;
+      max-width: 420px;
+      padding: 48px 40px;
+    }
+    .auth-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--ss-red);
+      margin-bottom: 8px;
+    }
+    .auth-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      margin-bottom: 36px;
+      line-height: 1;
+    }
+    .form-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+    }
+    .form-control {
+      background: #0D0D0D !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      color: #fff !important;
+      border-radius: 0 !important;
+      padding: 12px 14px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    .form-control:focus {
+      border-color: rgba(255,255,255,0.35) !important;
+      box-shadow: none !important;
+    }
+    .form-control::placeholder { color: rgba(255,255,255,0.2) !important; }
+    .form-text { font-size: 11px; color: rgba(255,255,255,0.25) !important; margin-top: 5px; }
+    .strength-bar-wrap { height: 2px; background: rgba(255,255,255,0.08); margin-top: 8px; }
+    .strength-bar { height: 100%; width: 0%; transition: width 0.3s, background 0.3s; }
+    .strength-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 5px; color: rgba(255,255,255,0.3); }
+    .input-group-text {
+      background: #0D0D0D !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      border-left: none !important;
+      color: rgba(255,255,255,0.3) !important;
+      border-radius: 0 !important;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .input-group-text:hover { color: rgba(255,255,255,0.7) !important; }
+    .btn-ss {
+      background: var(--ss-red);
+      color: #fff;
+      border: none;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 14px;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .btn-ss:hover { background: #a00026; color: #fff; }
+    .auth-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+    }
+    .auth-footer a {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .auth-footer a:hover { color: var(--ss-red); }
+    .auth-divider { border-color: rgba(255,255,255,0.07); margin: 28px 0; }
+  </style>
+</head>
+<body>
+
+  <div class="ss-topbar">
+    <div class="ss-logo-box">
+      <div class="top">SS</div>
+      <div class="bot">A<span>I</span></div>
+    </div>
+    <span class="ss-brand">SafeSignal</span>
+  </div>
+
+  <div class="auth-wrap">
+    <div class="auth-card">
+
+      <div class="auth-label">// CREATE ACCOUNT</div>
+      <div class="auth-title">REGISTER</div>
+
+      <form id="registerForm" novalidate>
+        <div class="mb-4">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" class="form-control" id="username"
+                 placeholder="Choose a username" autocomplete="username"/>
+          <div class="form-text">Minimum 3 characters</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="password"
+                   placeholder="Create a password" autocomplete="new-password"
+                   oninput="checkStrength(this.value)"/>
+            <span class="input-group-text" onclick="togglePassword('password', this)">
+              <i class="bi bi-eye"></i>
+            </span>
+          </div>
+          <div class="strength-bar-wrap mt-2">
+            <div class="strength-bar" id="strengthBar"></div>
+          </div>
+          <div class="strength-label" id="strengthLabel"></div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="confirmPassword">Confirm Password</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="confirmPassword"
+                   placeholder="Repeat your password" autocomplete="new-password"/>
+            <span class="input-group-text" onclick="togglePassword('confirmPassword', this)">
+              <i class="bi bi-eye"></i>
+            </span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-ss mt-2">+ CREATE ACCOUNT</button>
+      </form>
+
+      <hr class="auth-divider">
+
+      <div class="auth-footer">
+        Already have an account? <a href="login.html">Sign in</a>
+      </div>
+      <div class="auth-footer mt-2">
+        <a href="index.html">← Back to SafeSignal</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // UI only — toggle password + strength bar
+    function togglePassword(fieldId, iconWrap) {
+      const field = document.getElementById(fieldId);
+      const icon  = iconWrap.querySelector('i');
+      if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+      } else {
+        field.type = 'password';
+        icon.className = 'bi bi-eye';
+      }
+    }
+
+    function checkStrength(val) {
+      const bar   = document.getElementById('strengthBar');
+      const label = document.getElementById('strengthLabel');
+      let score = 0;
+      if (val.length >= 6)           score++;
+      if (val.length >= 10)          score++;
+      if (/[A-Z]/.test(val))         score++;
+      if (/[0-9]/.test(val))         score++;
+      if (/[^A-Za-z0-9]/.test(val))  score++;
+      const levels = [
+        { w: '20%',  bg: '#E4032E', text: 'WEAK'   },
+        { w: '40%',  bg: '#E4032E', text: 'WEAK'   },
+        { w: '60%',  bg: '#D4A017', text: 'FAIR'   },
+        { w: '80%',  bg: '#D4A017', text: 'GOOD'   },
+        { w: '100%', bg: '#2A8A4A', text: 'STRONG' },
+      ];
+      const l = levels[Math.max(0, score - 1)] || levels[0];
+      bar.style.width      = val.length ? l.w  : '0%';
+      bar.style.background = l.bg;
+      label.textContent    = val.length ? l.text : '';
+      label.style.color    = val.length ? l.bg : 'transparent';
+    }
+
+    // API integration will be added in next commit
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>
