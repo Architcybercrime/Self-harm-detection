@@ -164,6 +164,125 @@
     .helpline-item { font-size: 13px; color: rgba(255,255,255,0.7); padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .helpline-item:last-child { border: none; }
     .helpline-item strong { color: #fff; }
+
+    /* UNIFIED CARD */
+    .unified-card { padding: 0; overflow: hidden; }
+
+    /* ICON TAB BAR */
+    .icon-tab-bar {
+      display: flex;
+      gap: 4px;
+      padding: 16px 24px 0;
+      border-bottom: 1px solid var(--ss-border);
+      background: rgba(255,255,255,0.02);
+    }
+    .icon-tab {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--ss-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+      margin-bottom: -1px;
+    }
+    .icon-tab:hover {
+      background: rgba(255,255,255,0.07);
+      color: #fff;
+    }
+    .icon-tab.active {
+      background: var(--ss-red);
+      color: #fff;
+    }
+    /* Tooltip */
+    .icon-tab::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      padding: 5px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 99;
+    }
+    .icon-tab:hover::after { opacity: 1; }
+
+    /* MODE PANELS */
+    .mode-panel {
+      display: none;
+      padding: 28px;
+      animation: modeFadeUp 0.25s ease both;
+    }
+    .mode-panel.active { display: block; }
+    @keyframes modeFadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CAMERA */
+    .camera-box {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #0a0a0a;
+      border: 1px solid var(--ss-border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cameraFeed { width:100%; height:100%; object-fit:cover; display:none; }
+    .camera-placeholder { display:flex; flex-direction:column; align-items:center; gap:12px; color:var(--ss-muted); }
+    .scan-line { position:absolute; left:0; right:0; height:1px; background:rgba(194,0,47,0.5); display:none; animation:scan 2.5s linear infinite; }
+    @keyframes scan { 0%{top:0} 100%{top:100%} }
+    .camera-box.active .scan-line { display:block; }
+    .camera-box.active #cameraFeed { display:block; }
+    .camera-box.active .camera-placeholder { display:none; }
+
+    /* EMOTION / VOICE BARS */
+    .emotion-row { display:grid; grid-template-columns:100px 1fr 45px; align-items:center; gap:12px; margin-bottom:14px; }
+    .emotion-name { font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--ss-muted); }
+    .emo-bar-wrap { height:2px; background:rgba(255,255,255,0.06); }
+    .emo-bar { height:100%; background:var(--ss-red); width:0%; transition:width 0.8s ease; }
+    .emo-val { font-size:11px; color:var(--ss-muted); text-align:right; }
+
+    /* BACKEND NOTE */
+    .backend-note { margin-top:20px; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--ss-muted); border:1px solid var(--ss-border); padding:8px 14px; display:inline-flex; align-items:center; gap:8px; }
+    .badge-dot-anim { width:6px; height:6px; border-radius:50%; background:var(--ss-red); display:inline-block; animation:pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+    /* MIC */
+    .mic-box {
+      width:100%; aspect-ratio:4/3;
+      background:#0a0a0a;
+      border:1px solid var(--ss-border);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:16px;
+    }
+    .mic-vis { display:flex; align-items:center; gap:5px; height:50px; }
+    .mic-bar { width:4px; background:rgba(194,0,47,0.25); border-radius:2px; transition:height 0.1s ease; }
+    .mic-box.recording .mic-bar { background:var(--ss-red); }
+    .mic-box.recording #micIcon { color:var(--ss-red) !important; }
+    .mic-status { font-size:10px; font-weight:700; letter-spacing:0.25em; text-transform:uppercase; color:rgba(255,255,255,0.25); }
+    .mic-box.recording .mic-status { color:var(--ss-red); }
+    .mic-timer { font-size:24px; font-weight:900; color:rgba(255,255,255,0.15); letter-spacing:0.1em; }
+    .mic-box.recording .mic-timer { color:rgba(255,255,255,0.6); }
   </style>
 </head>
 <body>
@@ -206,75 +325,166 @@
       <div class="page-title">ANALYSE<br>SIGNALS</div>
     </div>
 
-    <div class="row g-4">
+    <!-- UNIFIED ANALYSIS CARD -->
+    <div class="ss-card unified-card">
 
-      <!-- Input -->
-      <div class="col-lg-6">
-        <div class="ss-card">
-          <div class="card-label">// Input Text</div>
-          <textarea class="ss-input" id="textInput"
-            placeholder="Type or paste text here to analyse for risk signals..."></textarea>
-          <div class="mt-3">
-            <button class="btn-ss" id="predictBtn" onclick="runPrediction()">
-              <i class="bi bi-cpu"></i>
-              <span id="predictBtnText">RUN ANALYSIS</span>
-              <span id="predictSpinner" style="display:none">
-                <span class="spinner-border spinner-border-sm"></span>
-              </span>
-            </button>
+      <!-- ICON TAB BAR -->
+      <div class="icon-tab-bar">
+        <button class="icon-tab active" onclick="switchMode('text')" data-tooltip="Text Analysis">
+          <i class="bi bi-file-text"></i>
+        </button>
+        <button class="icon-tab" onclick="switchMode('face')" data-tooltip="Facial Analysis">
+          <i class="bi bi-emoji-smile"></i>
+        </button>
+        <button class="icon-tab" onclick="switchMode('voice')" data-tooltip="Voice Analysis">
+          <i class="bi bi-mic"></i>
+        </button>
+      </div>
+
+      <!-- MODE: TEXT ANALYSIS -->
+      <div class="mode-panel active" id="modeText">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card-label">// Input Text</div>
+            <textarea class="ss-input" id="textInput"
+              placeholder="Type or paste text here to analyse for risk signals..."></textarea>
+            <div class="mt-3">
+              <button class="btn-ss" id="predictBtn" onclick="runPrediction()">
+                <i class="bi bi-cpu"></i>
+                <span id="predictBtnText">RUN ANALYSIS</span>
+                <span id="predictSpinner" style="display:none">
+                  <span class="spinner-border spinner-border-sm"></span>
+                </span>
+              </button>
+            </div>
+            <div id="textError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
           </div>
-          <div id="textError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
+          <div class="col-lg-6">
+            <div class="card-label">// Result</div>
+            <div id="resultPlaceholder" style="color:var(--ss-muted); font-size:13px; padding-top:8px;">
+              Results will appear here after analysis.
+            </div>
+            <div id="resultPanel">
+              <div class="result-level-text" id="resultLevel">—</div>
+              <div class="result-bar-wrap">
+                <div class="result-bar" id="resultBar"></div>
+              </div>
+              <div class="result-meta">
+                <div class="meta-item"><strong id="metaConfidence">—</strong>Confidence</div>
+                <div class="meta-item"><strong id="metaSentiment">—</strong>Sentiment</div>
+                <div class="meta-item"><strong id="metaSeverity">—</strong>Severity</div>
+              </div>
+              <div class="indicators" id="indicators"></div>
+              <div class="helplines" id="helplines">
+                <div class="helplines-title">
+                  <i class="bi bi-telephone-fill me-2"></i>IMMEDIATE SUPPORT AVAILABLE
+                </div>
+                <div class="helpline-item"><strong>iCall</strong> 9152987821</div>
+                <div class="helpline-item"><strong>Vandrevala Foundation</strong> 1860-2662-345</div>
+                <div class="helpline-item"><strong>AASRA</strong> 9820466627</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Result -->
-      <div class="col-lg-6">
-        <div class="ss-card" style="min-height:200px;">
-          <div class="card-label">// Result</div>
-
-          <div id="resultPlaceholder" style="color:var(--ss-muted); font-size:13px;">
-            Results will appear here after analysis.
+      <!-- MODE: FACIAL ANALYSIS -->
+      <div class="mode-panel" id="modeFace">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card-label">// Camera Feed</div>
+            <div class="camera-box" id="cameraBox">
+              <div class="scan-line"></div>
+              <video id="cameraFeed" autoplay muted playsinline></video>
+              <div class="camera-placeholder">
+                <i class="bi bi-camera-video-off" style="font-size:40px;"></i>
+                <span style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase;">Camera not started</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+              <button class="btn-ss" id="startCamBtn" onclick="startCamera()">
+                <i class="bi bi-camera-video-fill"></i> START CAMERA
+              </button>
+              <button class="btn-ss" id="captureBtn" onclick="captureAndAnalyse()"
+                style="display:none; background:#1a1a1a; border:1px solid rgba(255,255,255,0.15);">
+                <i class="bi bi-cpu"></i>
+                <span id="captureBtnText">CAPTURE & ANALYSE</span>
+                <span id="captureSpinner" style="display:none"><span class="spinner-border spinner-border-sm"></span></span>
+              </button>
+              <button class="btn-ss" id="stopCamBtn" onclick="stopCamera()"
+                style="display:none; background:none; border:1px solid rgba(255,255,255,0.15);">
+                <i class="bi bi-stop-fill"></i> STOP
+              </button>
+            </div>
+            <div id="camError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
           </div>
-
-          <div id="resultPanel">
-            <div class="result-level-text" id="resultLevel">—</div>
-            <div class="result-bar-wrap">
-              <div class="result-bar" id="resultBar"></div>
-            </div>
-            <div class="result-meta">
-              <div class="meta-item">
-                <strong id="metaConfidence">—</strong>Confidence
-              </div>
-              <div class="meta-item">
-                <strong id="metaSentiment">—</strong>Sentiment
-              </div>
-              <div class="meta-item">
-                <strong id="metaSeverity">—</strong>Severity
-              </div>
-            </div>
-            <div class="indicators" id="indicators"></div>
-            <div class="helplines" id="helplines">
-              <div class="helplines-title">
-                <i class="bi bi-telephone-fill me-2"></i>
-                IMMEDIATE SUPPORT AVAILABLE
-              </div>
-              <div class="helpline-item"><strong>iCall</strong> 9152987821</div>
-              <div class="helpline-item"><strong>Vandrevala Foundation</strong> 1860-2662-345</div>
-              <div class="helpline-item"><strong>AASRA</strong> 9820466627</div>
+          <div class="col-lg-6">
+            <div class="card-label">// Detected Emotions</div>
+            <div class="emotion-row"><span class="emotion-name">NEUTRAL</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoNeutral"></div></div><span class="emo-val" id="emoNeutralVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">SADNESS</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoSad"></div></div><span class="emo-val" id="emoSadVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">ANXIETY</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoAnxiety"></div></div><span class="emo-val" id="emoAnxietyVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">DISTRESS</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoDistress"></div></div><span class="emo-val" id="emoDistressVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">CALM</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoCalm"></div></div><span class="emo-val" id="emoCalmVal">—</span></div>
+            <div class="backend-note">
+              <span class="badge-dot-anim"></span>
+              Backend model integration in progress
             </div>
           </div>
-
         </div>
       </div>
 
-    </div>
-  </div>
+      <!-- MODE: VOICE ANALYSIS -->
+      <div class="mode-panel" id="modeVoice">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card-label">// Microphone</div>
+            <div class="mic-box" id="micBox">
+              <div class="mic-vis" id="micVis">
+                <div class="mic-bar" style="height:20%"></div>
+                <div class="mic-bar" style="height:45%"></div>
+                <div class="mic-bar" style="height:70%"></div>
+                <div class="mic-bar" style="height:100%"></div>
+                <div class="mic-bar" style="height:70%"></div>
+                <div class="mic-bar" style="height:45%"></div>
+                <div class="mic-bar" style="height:20%"></div>
+              </div>
+              <i class="bi bi-mic" id="micIcon" style="font-size:32px; color:rgba(255,255,255,0.25);"></i>
+              <div class="mic-status" id="micStatus">READY TO RECORD</div>
+              <div class="mic-timer" id="micTimer">00:00</div>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:16px;">
+              <button class="btn-ss" id="startMicBtn" onclick="startMic()">
+                <i class="bi bi-mic-fill"></i> START RECORDING
+              </button>
+              <button class="btn-ss" id="stopMicBtn" onclick="stopMic()"
+                style="display:none; background:none; border:1px solid rgba(255,255,255,0.15);">
+                <i class="bi bi-stop-fill"></i> STOP
+              </button>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card-label">// Voice Signals</div>
+            <div class="emotion-row"><span class="emotion-name">PITCH STRESS</span><div class="emo-bar-wrap"><div class="emo-bar" id="voicePitch"></div></div><span class="emo-val" id="voicePitchVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">SPEECH RATE</span><div class="emo-bar-wrap"><div class="emo-bar" id="voiceRate"></div></div><span class="emo-val" id="voiceRateVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">TREMOR</span><div class="emo-bar-wrap"><div class="emo-bar" id="voiceTremor"></div></div><span class="emo-val" id="voiceTremorVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">FLAT AFFECT</span><div class="emo-bar-wrap"><div class="emo-bar" id="voiceFlat"></div></div><span class="emo-val" id="voiceFlatVal">—</span></div>
+            <div class="emotion-row"><span class="emotion-name">VOCAL ENERGY</span><div class="emo-bar-wrap"><div class="emo-bar" id="voiceEnergy"></div></div><span class="emo-val" id="voiceEnergyVal">—</span></div>
+            <div class="backend-note">
+              <span class="badge-dot-anim"></span>
+              Backend model integration in progress
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end unified card -->
+  </div><!-- end main -->
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const API   = 'http://127.0.0.1:5000/api';
     const token = localStorage.getItem('token');
-  //  if (!token) window.location.href = 'login.html';
+   // if (!token) window.location.href = 'login.html';
 
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';
@@ -360,6 +570,128 @@
     document.getElementById('textInput').addEventListener('keydown', e => {
       if (e.key === 'Enter' && e.ctrlKey) runPrediction();
     });
+
+    /* ── MODE SWITCHER ── */
+    function switchMode(mode) {
+      document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.icon-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1))
+        .classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    /* ── CAMERA ── */
+    let cameraStream = null;
+
+    function startCamera() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          cameraStream = stream;
+          document.getElementById('cameraFeed').srcObject = stream;
+          document.getElementById('cameraBox').classList.add('active');
+          document.getElementById('startCamBtn').style.display  = 'none';
+          document.getElementById('captureBtn').style.display   = 'inline-flex';
+          document.getElementById('stopCamBtn').style.display   = 'inline-flex';
+        })
+        .catch(() => {
+          document.getElementById('camError').textContent = 'Camera access denied.';
+          document.getElementById('camError').style.display = 'block';
+        });
+    }
+
+    function stopCamera() {
+      if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+      document.getElementById('cameraFeed').srcObject = null;
+      document.getElementById('cameraBox').classList.remove('active');
+      document.getElementById('startCamBtn').style.display = 'inline-flex';
+      document.getElementById('captureBtn').style.display  = 'none';
+      document.getElementById('stopCamBtn').style.display  = 'none';
+    }
+
+    async function captureAndAnalyse() {
+      const video  = document.getElementById('cameraFeed');
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const image_base64 = canvas.toDataURL('image/jpeg').split(',')[1];
+      document.getElementById('captureBtn').disabled = true;
+      document.getElementById('captureBtnText').style.display  = 'none';
+      document.getElementById('captureSpinner').style.display  = 'inline';
+      try {
+        const res  = await fetch(`${API}/analyze-face`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ image_base64 })
+        });
+        const data = await res.json();
+        const set  = (id, vid, val) => {
+          const pct = val !== undefined ? Math.round(val * 100) : 0;
+          document.getElementById(id).style.width  = pct + '%';
+          document.getElementById(vid).textContent = val !== undefined ? pct + '%' : '—';
+        };
+        set('emoNeutral',  'emoNeutralVal',  data.neutral  || data.emotions?.neutral);
+        set('emoSad',      'emoSadVal',      data.sad      || data.emotions?.sad);
+        set('emoAnxiety',  'emoAnxietyVal',  data.anxiety  || data.emotions?.anxiety);
+        set('emoDistress', 'emoDistressVal', data.distress || data.emotions?.distress);
+        set('emoCalm',     'emoCalmVal',     data.calm     || data.emotions?.calm);
+      } catch(err) {
+        document.getElementById('camError').textContent = 'Cannot connect to server.';
+        document.getElementById('camError').style.display = 'block';
+      } finally {
+        document.getElementById('captureBtn').disabled = false;
+        document.getElementById('captureBtnText').style.display = 'inline';
+        document.getElementById('captureSpinner').style.display = 'none';
+      }
+    }
+
+    /* ── MIC ── */
+    let micStream = null, micAnimFrame = null, micInterval = null, micSecs = 0;
+
+    function startMic() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          micStream = stream;
+          micSecs   = 0;
+          const ctx     = new (window.AudioContext || window.webkitAudioContext)();
+          const source  = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 32;
+          source.connect(analyser);
+          const bars = document.querySelectorAll('.mic-bar');
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          function draw() {
+            micAnimFrame = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(data);
+            bars.forEach((b, i) => { b.style.height = Math.max(8, (data[i] / 255) * 100) + '%'; });
+          }
+          draw();
+          micInterval = setInterval(() => {
+            micSecs++;
+            const m = String(Math.floor(micSecs/60)).padStart(2,'0');
+            const s = String(micSecs%60).padStart(2,'0');
+            document.getElementById('micTimer').textContent = m+':'+s;
+          }, 1000);
+          document.getElementById('micBox').classList.add('recording');
+          document.getElementById('micStatus').textContent = 'RECORDING — AWAITING MODEL';
+          document.getElementById('startMicBtn').style.display = 'none';
+          document.getElementById('stopMicBtn').style.display  = 'inline-flex';
+        })
+        .catch(() => { alert('Microphone access denied.'); });
+    }
+
+    function stopMic() {
+      if (micStream)    { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
+      if (micInterval)  { clearInterval(micInterval); micInterval = null; }
+      const idle = [20,45,70,100,70,45,20];
+      document.querySelectorAll('.mic-bar').forEach((b,i) => b.style.height = idle[i]+'%');
+      document.getElementById('micBox').classList.remove('recording');
+      document.getElementById('micStatus').textContent  = 'READY TO RECORD';
+      document.getElementById('micTimer').textContent   = '00:00';
+      document.getElementById('startMicBtn').style.display = 'inline-flex';
+      document.getElementById('stopMicBtn').style.display  = 'none';
+    }
   </script>
 </body>
 </html>

@@ -51,7 +51,7 @@ nav {
   justify-content: space-between;
   align-items: flex-start;
   padding: 24px 32px;
-  pointer-events: none; /* let scroll events pass through */
+  pointer-events: auto; /* let scroll events pass through */
 }
 
 /* The white box logo (top-left) */
@@ -298,4 +298,20 @@ nav {
   font-size: 20px;
   font-weight: 300;
   line-height: 1;
+}
+.nav-signin {
+  font-family: var(--condensed);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--white);
+  text-decoration: none;
+  padding: 8px 20px;
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: border-color 0.2s, color 0.2s;
+}
+.nav-signin:hover {
+  border-color: var(--red);
+  color: var(--red);
 }

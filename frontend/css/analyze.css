@@ -416,3 +416,19 @@ textarea::placeholder { color: rgba(0,0,0,0.3); }
   transition: color 0.3s;
 }
 .mic-wrap.recording .mic-timer { color: rgba(255,255,255,0.6); }
+.demo-note {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.4);
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 8px 16px;
+  margin-bottom: 32px;
+  display: inline-block;
+}
+.demo-note a {
+  color: var(--red);
+  text-decoration: none;
+}
+.demo-note a:hover { text-decoration: underline; }
