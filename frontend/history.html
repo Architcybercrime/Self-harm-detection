@@ -334,7 +334,26 @@
   <script>
     const API   = 'http://127.0.0.1:5000/api';
     const token = localStorage.getItem('token');
-  //  if (!token) window.location.href = 'login.html';
+if (!token) window.location.href = 'login.html';
+
+// Extra check: decode JWT and verify it hasn't expired
+function isTokenExpired(token) {
+  try {
+    // JWT is 3 parts split by dot: header.payload.signature
+    // The payload (middle part) contains the expiry time
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // payload.exp is expiry time in seconds, Date.now() is in ms
+    return payload.exp * 1000 < Date.now();
+  } catch (e) {
+    return true; // if decoding fails, treat as expired
+  }
+}
+
+if (isTokenExpired(token)) {
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  window.location.href = 'login.html';
+}
 
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';
