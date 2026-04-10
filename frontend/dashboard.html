@@ -6,7 +6,6 @@
   <title>SafeSignal — Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     :root {
       --ss-red: #C2002F;
@@ -284,19 +283,48 @@
     .mic-box.recording .mic-status { color:var(--ss-red); }
     .mic-timer { font-size:24px; font-weight:900; color:rgba(255,255,255,0.15); letter-spacing:0.1em; }
     .mic-box.recording .mic-timer { color:rgba(255,255,255,0.6); }
-    #wsToast.show { display: block !important; }
-    @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+
+      .sidebar {
+        width: 100%;
+        min-height: auto;
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .sidebar-logo { border-bottom: none; border-right: 1px solid var(--ss-border); padding: 12px 16px; }
+      .sidebar-user { display: none; }
+      .sidebar-nav {
+        display: flex;
+        flex-direction: row;
+        padding: 0;
+        flex: 1;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--ss-border);
+      }
+      .nav-item {
+        padding: 12px 16px;
+        border-left: none !important;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        font-size: 10px;
+      }
+      .nav-item.active { border-bottom-color: var(--ss-red) !important; background: none; }
+      .sidebar-bottom { width: 100%; padding: 10px 16px; border-top: none; border-bottom: 1px solid var(--ss-border); }
+      .btn-logout { padding: 8px; font-size: 10px; }
+
+      .main { margin-left: 0; padding: 20px; }
+      .page-title { font-size: 28px; }
+
+      .ss-card, .chart-card, .stat-card { padding: 18px; }
     }
   </style>
 </head>
 <body>
-<!-- WebSocket toast notification -->
-<div id="wsToast" style="display:none; position:fixed; top:24px; right:24px; background:#C2002F; color:#fff; padding:16px 24px; font-size:12px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; z-index:9999; max-width:320px; animation:slideIn 0.3s ease;">
-  <i class="bi bi-exclamation-triangle-fill me-2"></i>
-  <span id="wsToastMsg">HIGH RISK ALERT</span>
-</div>
+
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -354,7 +382,7 @@
       <!-- MODE: TEXT ANALYSIS -->
       <div class="mode-panel active" id="modeText">
         <div class="row g-4">
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Input Text</div>
             <textarea class="ss-input" id="textInput"
               placeholder="Type or paste text here to analyse for risk signals..."></textarea>
@@ -369,7 +397,7 @@
             </div>
             <div id="textError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
           </div>
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Result</div>
             <div id="resultPlaceholder" style="color:var(--ss-muted); font-size:13px; padding-top:8px;">
               Results will appear here after analysis.
@@ -401,7 +429,7 @@
       <!-- MODE: FACIAL ANALYSIS -->
       <div class="mode-panel" id="modeFace">
         <div class="row g-4">
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Camera Feed</div>
             <div class="camera-box" id="cameraBox">
               <div class="scan-line"></div>
@@ -428,7 +456,7 @@
             </div>
             <div id="camError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
           </div>
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Detected Emotions</div>
             <div class="emotion-row"><span class="emotion-name">NEUTRAL</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoNeutral"></div></div><span class="emo-val" id="emoNeutralVal">—</span></div>
             <div class="emotion-row"><span class="emotion-name">SADNESS</span><div class="emo-bar-wrap"><div class="emo-bar" id="emoSad"></div></div><span class="emo-val" id="emoSadVal">—</span></div>
@@ -446,7 +474,7 @@
       <!-- MODE: VOICE ANALYSIS -->
       <div class="mode-panel" id="modeVoice">
         <div class="row g-4">
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Microphone</div>
             <div class="mic-box" id="micBox">
               <div class="mic-vis" id="micVis">
@@ -472,7 +500,7 @@
               </button>
             </div>
           </div>
-          <div class="col-lg-6">
+          <div class="col-12 col-lg-6">
             <div class="card-label">// Voice Signals</div>
             <div class="emotion-row"><span class="emotion-name">PITCH STRESS</span><div class="emo-bar-wrap"><div class="emo-bar" id="voicePitch"></div></div><span class="emo-val" id="voicePitchVal">—</span></div>
             <div class="emotion-row"><span class="emotion-name">SPEECH RATE</span><div class="emo-bar-wrap"><div class="emo-bar" id="voiceRate"></div></div><span class="emo-val" id="voiceRateVal">—</span></div>
@@ -494,7 +522,7 @@
   <script>
     const API   = 'http://127.0.0.1:5000/api';
     const token = localStorage.getItem('token');
-   // if (!token) window.location.href = 'login.html';
+  //  if (!token) window.location.href = 'login.html';
 
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';
@@ -702,28 +730,6 @@
       document.getElementById('startMicBtn').style.display = 'inline-flex';
       document.getElementById('stopMicBtn').style.display  = 'none';
     }
-    /* ── WEBSOCKET: Real-time HIGH risk alerts ──
-   Connects to Archit's socket.io server.
-   When backend detects HIGH risk, it broadcasts
-   'high_risk_alert' event → we show a red toast. */
-try {
-  const socket = io('http://127.0.0.1:5000');
-
-  socket.on('connected', () => {
-    console.log('WebSocket connected to SafeSignal backend');
-  });
-
-  socket.on('high_risk_alert', (data) => {
-    const toast = document.getElementById('wsToast');
-    document.getElementById('wsToastMsg').textContent =
-      'HIGH RISK DETECTED — ' + (data.message || 'Immediate attention required');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 6000);
-  });
-
-} catch(e) {
-  console.log('WebSocket not available');
-}
   </script>
 </body>
 </html>

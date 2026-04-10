@@ -432,3 +432,19 @@ textarea::placeholder { color: rgba(0,0,0,0.3); }
   text-decoration: none;
 }
 .demo-note a:hover { text-decoration: underline; }
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .analyze-section { padding: 60px 20px; }
+  .analyze-grid { grid-template-columns: 1fr; gap: 32px; }
+  .analyze-title { font-size: clamp(48px, 14vw, 80px); margin-bottom: 32px; }
+  textarea { min-height: 120px; font-size: 14px; }
+  .analyze-tabs { overflow-x: auto; }
+  .analyze-tab { padding: 10px 18px; font-size: 10px; }
+  .camera-wrap { aspect-ratio: 4/3; }
+  .mic-wrap { aspect-ratio: 4/3; }
+  .emotion-row { grid-template-columns: 80px 1fr 36px; gap: 8px; }
+  .result-level { font-size: clamp(36px, 12vw, 60px); }
+  .demo-note { font-size: 9px; padding: 6px 12px; }
+}
