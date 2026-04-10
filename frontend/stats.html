@@ -103,6 +103,44 @@
     /* ALERT RATE BAR */
     .alert-bar-wrap { height: 6px; background: rgba(255,255,255,0.06); margin-top: 12px; border-radius: 3px; }
     .alert-bar { height: 100%; background: var(--ss-red); border-radius: 3px; width: 0%; transition: width 1s ease; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+
+      .sidebar {
+        width: 100%;
+        min-height: auto;
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .sidebar-logo { border-bottom: none; border-right: 1px solid var(--ss-border); padding: 12px 16px; }
+      .sidebar-user { display: none; }
+      .sidebar-nav {
+        display: flex;
+        flex-direction: row;
+        padding: 0;
+        flex: 1;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--ss-border);
+      }
+      .nav-item {
+        padding: 12px 16px;
+        border-left: none !important;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        font-size: 10px;
+      }
+      .nav-item.active { border-bottom-color: var(--ss-red) !important; background: none; }
+      .sidebar-bottom { width: 100%; padding: 10px 16px; border-top: none; border-bottom: 1px solid var(--ss-border); }
+      .btn-logout { padding: 8px; font-size: 10px; }
+
+      .main { margin-left: 0; padding: 20px; }
+      .page-title { font-size: 28px; }
+
+      .ss-card, .chart-card, .stat-card { padding: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -157,27 +195,27 @@
 
       <!-- Top stat cards -->
       <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-sm-6 col-md-3">
           <div class="stat-card">
             <div class="stat-number" id="statTotal">—</div>
             <div class="stat-label">Total Predictions</div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-sm-6 col-md-3">
           <div class="stat-card">
             <div class="stat-number" id="statHigh" style="color:#ff6b8a;">—</div>
             <div class="stat-label">High Risk</div>
             <div class="stat-change" id="statHighPct">—</div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-sm-6 col-md-3">
           <div class="stat-card">
             <div class="stat-number" id="statLow" style="color:#6fcf97;">—</div>
             <div class="stat-label">Low Risk</div>
             <div class="stat-change" id="statLowPct">—</div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-sm-6 col-md-3">
           <div class="stat-card">
             <div class="stat-number" id="statAlerts">—</div>
             <div class="stat-label">Alerts Triggered</div>
@@ -190,7 +228,7 @@
       <div class="row g-4">
 
         <!-- Doughnut: Risk Distribution -->
-        <div class="col-lg-4">
+        <div class="col-12 col-lg-4">
           <div class="chart-card">
             <div class="chart-title">// Risk Distribution</div>
             <div class="chart-wrap" style="max-width:240px; margin:0 auto;">
@@ -200,7 +238,7 @@
         </div>
 
         <!-- Bar: Predictions by Modality -->
-        <div class="col-lg-4">
+        <div class="col-12 col-lg-4">
           <div class="chart-card">
             <div class="chart-title">// Predictions by Modality</div>
             <div class="chart-wrap">
@@ -210,7 +248,7 @@
         </div>
 
         <!-- Bar: Recent Trend (last 7 days) -->
-        <div class="col-lg-4">
+        <div class="col-12 col-lg-4">
           <div class="chart-card">
             <div class="chart-title">// Recent Prediction Trend</div>
             <div class="chart-wrap">
@@ -228,7 +266,7 @@
   <script>
     const API   = 'http://127.0.0.1:5000/api';
     const token = localStorage.getItem('token');
-  //  if (!token) window.location.href = 'login.html';
+   // if (!token) window.location.href = 'login.html';
 
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';

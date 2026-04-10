@@ -315,3 +315,31 @@ nav {
   border-color: var(--red);
   color: var(--red);
 }
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE (≤768px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #cursor { display: none; }
+  nav { padding: 16px 20px; }
+  .nav-logo { transform: scale(0.85); transform-origin: top left; }
+  .nav-signin { font-size: 10px; padding: 6px 14px; letter-spacing: 0.12em; }
+  .hero-title { font-size: clamp(52px, 16vw, 120px); left: 20px; bottom: 80px; }
+  .hero-scroll { display: none; }
+  .hero-cta { bottom: 20px; right: 20px; font-size: 10px; padding: 10px 18px; }
+  .bio-section { flex-direction: column; padding: 40px 20px; gap: 24px; }
+  .bio-image-wrap { width: 100%; max-width: 100%; }
+  .bio-text { padding: 0; }
+  .bio-text p { font-size: 15px; }
+  .chapter-section { flex-direction: column; padding: 40px 20px; gap: 32px; }
+  .chapter-left, .chapter-right { width: 100%; }
+  .chapter-quote { font-size: clamp(20px, 6vw, 32px); }
+  .dark-chapter-title { font-size: clamp(60px, 18vw, 120px); margin-left: -8px; }
+  .racenight-section { min-height: 60vh; }
+  .float-card { display: none; }
+  #progress { height: 2px; }
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: clamp(44px, 18vw, 80px); }
+  .dark-chapter-title { font-size: clamp(48px, 20vw, 80px); }
+}

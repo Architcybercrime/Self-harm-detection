@@ -118,3 +118,13 @@ body {
 .lang-hi .result-note {
   font-family: 'Noto Sans Devanagari', var(--serif);
 }
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE BASE
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Restore cursor on mobile */
+  body { cursor: auto; }
+
+  /* Tighten section padding */
+  section { padding-left: 20px !important; padding-right: 20px !important; }
+}
