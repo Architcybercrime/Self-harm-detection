@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafeSignal — Statistics</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --ss-red: #C2002F;
+      --ss-dark: #0D0D0D;
+      --ss-panel: #161616;
+      --ss-border: rgba(255,255,255,0.07);
+      --ss-muted: rgba(255,255,255,0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--ss-dark);
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0; min-height: 100vh; display: flex;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 220px; min-height: 100vh;
+      background: var(--ss-panel);
+      border-right: 1px solid var(--ss-border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; z-index: 100;
+    }
+    .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid var(--ss-border); display: flex; align-items: center; gap: 10px; }
+    .logo-box { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; }
+    .logo-box .t { font-size: 11px; font-weight: 700; color: #fff; }
+    .logo-box .b { font-size: 11px; font-weight: 700; color: #fff; }
+    .logo-box .b span { color: var(--ss-red); }
+    .logo-name { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ss-muted); }
+    .sidebar-user { padding: 16px 20px; border-bottom: 1px solid var(--ss-border); font-size: 12px; color: var(--ss-muted); }
+    .sidebar-user strong { display: block; color: #fff; font-size: 13px; margin-bottom: 2px; }
+    .sidebar-nav { flex: 1; padding: 16px 0; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ss-muted); text-decoration: none; transition: color 0.2s, background 0.2s; cursor: pointer; }
+    .nav-item:hover { color: #fff; background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: #fff; border-left: 2px solid var(--ss-red); background: rgba(194,0,47,0.08); }
+    .nav-item i { font-size: 15px; }
+    .sidebar-bottom { padding: 16px 20px; border-top: 1px solid var(--ss-border); }
+    .btn-logout { width: 100%; background: none; border: 1px solid rgba(255,255,255,0.1); color: var(--ss-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 10px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+    .btn-logout:hover { border-color: var(--ss-red); color: var(--ss-red); }
+
+    /* MAIN */
+    .main { margin-left: 220px; flex: 1; padding: 40px; min-height: 100vh; }
+    .page-header { margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid var(--ss-border); }
+    .page-label { font-size: 10px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--ss-red); margin-bottom: 6px; }
+    .page-title { font-size: 36px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1; color: #fff; }
+
+    /* STAT CARDS */
+    .stat-card {
+      background: var(--ss-panel);
+      border: 1px solid var(--ss-border);
+      padding: 24px;
+    }
+    .stat-number {
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ss-muted);
+    }
+    .stat-change {
+      font-size: 11px;
+      margin-top: 8px;
+      color: var(--ss-muted);
+    }
+
+    /* CHART CARD */
+    .chart-card {
+      background: var(--ss-panel);
+      border: 1px solid var(--ss-border);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .chart-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ss-muted);
+      margin-bottom: 24px;
+    }
+    .chart-wrap { position: relative; }
+
+    /* LOADING / ERROR */
+    .state-box { text-align: center; padding: 60px 20px; color: var(--ss-muted); }
+    .state-box i { font-size: 36px; margin-bottom: 16px; display: block; }
+
+    /* ALERT RATE BAR */
+    .alert-bar-wrap { height: 6px; background: rgba(255,255,255,0.06); margin-top: 12px; border-radius: 3px; }
+    .alert-bar { height: 100%; background: var(--ss-red); border-radius: 3px; width: 0%; transition: width 1s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-box">
+        <div class="t">SS</div>
+        <div class="b">A<span>I</span></div>
+      </div>
+      <div class="logo-name">SafeSignal</div>
+    </div>
+    <div class="sidebar-user">
+      <strong id="sidebarUsername">—</strong>
+      Logged in
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="dashboard.html"><i class="bi bi-cpu"></i> Analysis</a>
+      <a class="nav-item" href="history.html"><i class="bi bi-clock-history"></i> History</a>
+      <a class="nav-item active" href="stats.html"><i class="bi bi-bar-chart-line"></i> Statistics</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="logout()">
+        <i class="bi bi-box-arrow-left me-2"></i> Sign Out
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="page-header">
+      <div class="page-label">// STATISTICS</div>
+      <div class="page-title">SYSTEM<br>ANALYTICS</div>
+    </div>
+
+    <!-- Loading -->
+    <div class="state-box" id="stateLoading">
+      <div class="spinner-border text-secondary" role="status"></div>
+      <p class="mt-3">Loading statistics...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="state-box" id="stateError" style="display:none;">
+      <i class="bi bi-exclamation-triangle" style="color:#ff6b8a;"></i>
+      <p id="stateErrorMsg">Could not load statistics.</p>
+    </div>
+
+    <!-- Content (hidden until data loads) -->
+    <div id="statsContent" style="display:none;">
+
+      <!-- Top stat cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-number" id="statTotal">—</div>
+            <div class="stat-label">Total Predictions</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-number" id="statHigh" style="color:#ff6b8a;">—</div>
+            <div class="stat-label">High Risk</div>
+            <div class="stat-change" id="statHighPct">—</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-number" id="statLow" style="color:#6fcf97;">—</div>
+            <div class="stat-label">Low Risk</div>
+            <div class="stat-change" id="statLowPct">—</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-number" id="statAlerts">—</div>
+            <div class="stat-label">Alerts Triggered</div>
+            <div class="alert-bar-wrap"><div class="alert-bar" id="alertBar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="row g-4">
+
+        <!-- Doughnut: Risk Distribution -->
+        <div class="col-lg-4">
+          <div class="chart-card">
+            <div class="chart-title">// Risk Distribution</div>
+            <div class="chart-wrap" style="max-width:240px; margin:0 auto;">
+              <canvas id="chartDoughnut"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar: Predictions by Modality -->
+        <div class="col-lg-4">
+          <div class="chart-card">
+            <div class="chart-title">// Predictions by Modality</div>
+            <div class="chart-wrap">
+              <canvas id="chartModality"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar: Recent Trend (last 7 days) -->
+        <div class="col-lg-4">
+          <div class="chart-card">
+            <div class="chart-title">// Recent Prediction Trend</div>
+            <div class="chart-wrap">
+              <canvas id="chartTrend"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- end statsContent -->
+
+  </div><!-- end main -->
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const API   = 'http://127.0.0.1:5000/api';
+    const token = localStorage.getItem('token');
+  //  if (!token) window.location.href = 'login.html';
+
+    document.getElementById('sidebarUsername').textContent =
+      localStorage.getItem('username') || 'User';
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = 'login.html';
+    }
+
+    /* ─────────────────────────────────────────────
+       Chart.js global defaults — dark theme
+    ───────────────────────────────────────────── */
+    Chart.defaults.color           = 'rgba(255,255,255,0.4)';
+    Chart.defaults.borderColor     = 'rgba(255,255,255,0.06)';
+    Chart.defaults.font.family     = 'Segoe UI';
+    Chart.defaults.font.size       = 11;
+
+    /* ─────────────────────────────────────────────
+       LOAD STATS
+       Calls GET /api/db-stats with JWT token.
+       Backend returns totals, counts, modality
+       breakdown, recent trend data.
+    ───────────────────────────────────────────── */
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API}/db-stats`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (res.status === 401) { logout(); return; }
+
+        const data = await res.json();
+
+        document.getElementById('stateLoading').style.display = 'none';
+        document.getElementById('statsContent').style.display = 'block';
+
+        buildStats(data);
+
+      } catch (err) {
+        document.getElementById('stateLoading').style.display = 'none';
+        document.getElementById('stateError').style.display   = 'block';
+        document.getElementById('stateErrorMsg').textContent  =
+          'Cannot connect to server. Make sure the backend is running.';
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+       BUILD ALL STATS + CHARTS from API response
+    ───────────────────────────────────────────── */
+    function buildStats(data) {
+      /* ── Top numbers ── */
+      const total  = data.total_predictions || 0;
+      const high   = data.high_risk_count   || 0;
+      const low    = data.low_risk_count    || (total - high);
+      const alerts = data.alert_count       || data.alerts_triggered || 0;
+
+      document.getElementById('statTotal').textContent  = total;
+      document.getElementById('statHigh').textContent   = high;
+      document.getElementById('statLow').textContent    = low;
+      document.getElementById('statAlerts').textContent = alerts;
+
+      const highPct  = total ? Math.round((high  / total) * 100) : 0;
+      const lowPct   = total ? Math.round((low   / total) * 100) : 0;
+      const alertPct = total ? Math.round((alerts / total) * 100) : 0;
+
+      document.getElementById('statHighPct').textContent = highPct  + '% of total';
+      document.getElementById('statLowPct').textContent  = lowPct   + '% of total';
+
+      // Alert rate bar
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.getElementById('alertBar').style.width = alertPct + '%';
+      }));
+
+      /* ── Chart 1: Doughnut — Risk Distribution ── */
+      new Chart(document.getElementById('chartDoughnut'), {
+        type: 'doughnut',
+        data: {
+          labels: ['High Risk', 'Low Risk'],
+          datasets: [{
+            data: [high, low],
+            backgroundColor: ['rgba(228,3,46,0.8)', 'rgba(42,138,74,0.8)'],
+            borderColor:     ['#E4032E', '#2A8A4A'],
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } }
+          },
+          cutout: '70%',
+        }
+      });
+
+      /* ── Chart 2: Bar — Modality breakdown ── */
+      // Use data.modality_breakdown if available, else fallback
+      const modality = data.modality_breakdown || {
+        text:       data.text_count       || 0,
+        facial:     data.facial_count     || 0,
+        speech:     data.speech_count     || 0,
+        multimodal: data.multimodal_count || 0,
+      };
+
+      new Chart(document.getElementById('chartModality'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(modality).map(k => k.toUpperCase()),
+          datasets: [{
+            label: 'Predictions',
+            data:  Object.values(modality),
+            backgroundColor: 'rgba(194,0,47,0.6)',
+            borderColor:     '#C2002F',
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+
+      /* ── Chart 3: Line — Recent trend ── */
+      // Use data.recent_trend if available (array of {date, count})
+      // Otherwise build last 7 days with zeros as placeholder
+      let trendLabels, trendData;
+
+      if (data.recent_trend && Array.isArray(data.recent_trend)) {
+        trendLabels = data.recent_trend.map(d => d.date || d.day);
+        trendData   = data.recent_trend.map(d => d.count || d.total || 0);
+      } else {
+        // Fallback: last 7 days labels with zeros
+        trendLabels = [];
+        trendData   = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          trendLabels.push(d.toLocaleDateString('en', { month: 'short', day: 'numeric' }));
+          trendData.push(0);
+        }
+      }
+
+      new Chart(document.getElementById('chartTrend'), {
+        type: 'line',
+        data: {
+          labels: trendLabels,
+          datasets: [{
+            label: 'Predictions',
+            data:  trendData,
+            borderColor:     '#C2002F',
+            backgroundColor: 'rgba(194,0,47,0.1)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#C2002F',
+            fill: true,
+            tension: 0.4,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>
