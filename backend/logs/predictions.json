@@ -509,5 +509,12 @@
     "risk_level": "HIGH",
     "confidence": 0.8,
     "sentiment": -0.5423
+  },
+  {
+    "timestamp": "2026-04-21T14:36:28.078400",
+    "text_length": 5,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.5095
   }
 ]
