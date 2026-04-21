@@ -299,61 +299,22 @@ function runAnalysis() {
   btn.innerHTML = 'ANALYSING...';
   btn.disabled  = true;
 
- // ============ BACKEND API INTEGRATION ============
-  const API_BASE = 'http://127.0.0.1:5000/api';
-  let authToken = localStorage.getItem('auth_token');
+  // ── TODO: replace this block with your backend API call ──
+  // Example:
+  // fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ text }) ... })
+  //   .then(r => r.json())
+  //   .then(data => displayResult(data.level, data.score, data.signals))
+  //   .finally(() => { btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS'; btn.disabled = false; });
+  // ─────────────────────────────────────────────────────────
 
-  // Auto-login function
-  async function ensureAuth() {
-    if (authToken) return true;
-    try {
-      await fetch(`${API_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'demo', password: 'demo123' })
-      });
-    } catch (e) {}
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'demo', password: 'demo123' })
-    });
-    const data = await res.json();
-    if (data.access_token) {
-      authToken = data.access_token;
-      localStorage.setItem('auth_token', authToken);
-      return true;
-    }
-    return false;
-  }
-
-  // Call backend API
-  ensureAuth()
-    .then(() => fetch(`${API_BASE}/predict`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ text })
-    }))
-    .then(r => r.json())
-    .then(data => {
-      const level = data.risk_level === 'HIGH' ? 'HIGH RISK' : data.risk_level === 'MEDIUM' ? 'MODERATE' : 'LOW RISK';
-      const score = Math.round(data.confidence * 100);
-      const signals = [data.message];
-      displayResult(level, score, signals);
-    })
-    .catch(error => {
-      console.error('Backend Error:', error);
-      document.getElementById('resultLevel').textContent = 'CONNECTION ERROR';
-      document.getElementById('resultLevel').style.color = '#E4032E';
-      document.getElementById('result').classList.add('show');
-    })
-    .finally(() => {
-      btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS';
-      btn.disabled = false;
-    });
+  // Placeholder until backend is ready
+  setTimeout(() => {
+    document.getElementById('resultLevel').textContent = 'AWAITING BACKEND';
+    document.getElementById('resultLevel').style.color = 'var(--muted)';
+    document.getElementById('result').classList.add('show');
+    btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS';
+    btn.disabled  = false;
+  }, 600);
 }
 
 // Ctrl+Enter to run

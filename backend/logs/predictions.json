@@ -418,5 +418,96 @@
     "risk_level": "HIGH",
     "confidence": 0.5359,
     "sentiment": -0.8192
+  },
+  {
+    "timestamp": "2026-04-21T14:24:24.280725",
+    "text_length": 2,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.6705
+  },
+  {
+    "timestamp": "2026-04-21T14:24:36.820460",
+    "text_length": 4,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4588
+  },
+  {
+    "timestamp": "2026-04-21T14:24:52.522912",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.8176
+  },
+  {
+    "timestamp": "2026-04-21T14:25:01.054307",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.7845
+  },
+  {
+    "timestamp": "2026-04-21T14:25:01.865837",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.7845
+  },
+  {
+    "timestamp": "2026-04-21T14:25:11.317118",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:19.921468",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:20.668907",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:20.835869",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:20.989677",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:21.164620",
+    "text_length": 8,
+    "risk_level": "MEDIUM",
+    "confidence": 0.65,
+    "sentiment": -0.4019
+  },
+  {
+    "timestamp": "2026-04-21T14:25:25.181417",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.5574
+  },
+  {
+    "timestamp": "2026-04-21T14:25:34.785510",
+    "text_length": 8,
+    "risk_level": "HIGH",
+    "confidence": 0.8,
+    "sentiment": -0.5423
   }
 ]
