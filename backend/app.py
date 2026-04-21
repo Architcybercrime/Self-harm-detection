@@ -87,8 +87,15 @@ swagger = Swagger(app, template={
     }
 })
 
-model = joblib.load('model/risk_model.pkl')
-tfidf = joblib.load('model/tfidf_vectorizer.pkl')
+# Load model files if they exist
+try:
+    model = joblib.load('model/risk_model.pkl')
+    tfidf = joblib.load('model/tfidf_vectorizer.pkl')
+    print("✓ ML models loaded")
+except FileNotFoundError:
+    print("⚠️  Model files not found - using keyword-based fallback")
+    model = None
+    tfidf = None
 
 prediction_log = []
 
@@ -258,21 +265,41 @@ def predict():
     sentiment = scores['compound']
     neg_score = scores['neg']
 
-    tfidf_vec = tfidf.transform([cleaned]).toarray()
-    X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-
-    prediction  = model.predict(X)[0]
-    probability = model.predict_proba(X)[0]
-    confidence  = round(float(max(probability)), 4)
-
-    if prediction == 'suicide':
-        risk_level = 'HIGH'
-        alert      = True
-        message    = 'High risk indicators detected. Please seek professional support immediately.'
+    # Fallback prediction if model not available
+    if model is None or tfidf is None:
+        risk_keywords = ['suicide', 'kill', 'die', 'death', 'hopeless', 'worthless', 'end it', 'give up', 'no point']
+        text_lower = text.lower()
+        risk_count = sum(1 for word in risk_keywords if word in text_lower)
+        
+        if risk_count >= 2 or sentiment < -0.5:
+            risk_level = 'HIGH'
+            confidence = 0.80
+            alert = True
+        elif risk_count == 1 or sentiment < -0.2:
+            risk_level = 'MEDIUM'
+            confidence = 0.65
+            alert = False
+        else:
+            risk_level = 'LOW'
+            confidence = 0.75
+            alert = False
     else:
-        risk_level = 'LOW'
-        alert      = False
-        message    = 'No immediate concern detected. Continue monitoring.'
+        # ML-based prediction
+        tfidf_vec = tfidf.transform([cleaned]).toarray()
+        X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+
+        prediction  = model.predict(X)[0]
+        probability = model.predict_proba(X)[0]
+        confidence  = round(float(max(probability)), 4)
+
+        if prediction == 'suicide':
+            risk_level = 'HIGH'
+            alert      = True
+        else:
+            risk_level = 'LOW'
+            alert      = False
+
+    message = 'High risk indicators detected. Please seek professional support immediately.' if alert else 'No immediate concern detected. Continue monitoring.'
 
     prediction_log.append({
         "timestamp":  datetime.datetime.now().isoformat(),
@@ -353,7 +380,7 @@ def stats():
     return jsonify({
         "total_predictions": total,
         "alerts_triggered":  alerts,
-        "alert_rate":        round(alerts/total, 4),
+        "alert_rate":        round(alerts/total, 4) if total > 0 else 0,
         "recent":            prediction_log[-5:]
     })
 
@@ -509,23 +536,35 @@ def predict_multimodal():
     speech_result = None
     text          = ""
 
+    # Text analysis
     if 'text' in data:
         text = sanitize_text(str(data['text']))
         is_valid, errors = validate_text_input(text)
         if not is_valid:
             return jsonify({"error": errors[0]}), 400
+        
         cleaned   = full_preprocess(text)
         scores    = get_sentiment_scores(text)
         sentiment = scores['compound']
         neg_score = scores['neg']
-        tfidf_vec = tfidf.transform([cleaned]).toarray()
-        X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-        prediction  = model.predict(X)[0]
-        probability = model.predict_proba(X)[0]
-        text_result = {
-            "risk_level": 'HIGH' if prediction == 'suicide' else 'LOW',
-            "confidence": round(float(max(probability)), 4)
-        }
+        
+        if model is None or tfidf is None:
+            # Fallback
+            risk_keywords = ['suicide', 'kill', 'die', 'death', 'hopeless', 'worthless']
+            risk_count = sum(1 for word in risk_keywords if word in text.lower())
+            text_result = {
+                "risk_level": 'HIGH' if risk_count >= 2 else 'LOW',
+                "confidence": 0.75
+            }
+        else:
+            tfidf_vec = tfidf.transform([cleaned]).toarray()
+            X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+            prediction  = model.predict(X)[0]
+            probability = model.predict_proba(X)[0]
+            text_result = {
+                "risk_level": 'HIGH' if prediction == 'suicide' else 'LOW',
+                "confidence": round(float(max(probability)), 4)
+            }
 
     if data.get('use_webcam'):
         face_result = capture_webcam_frame()
