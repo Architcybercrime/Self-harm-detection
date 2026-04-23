@@ -42,20 +42,35 @@ from utils.auth import register_user, login_user, setup_jwt
 from utils.validators import validate_text_input, validate_credentials, sanitize_text, validate_audio_duration
 
 app  = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:3000",
-            "http://127.0.0.1:5000",
-            "http://localhost:5000",
-            "null",
-            "https://self-harm-detection.vercel.app",
-            "https://*.vercel.app"
-        ],
-        "supports_credentials": True
-    }
-})
+# ── CORS CONFIGURATION (Production-Grade) ────────────
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "null",  # For file:// protocol (local HTML)
+    "https://self-harm-detection.vercel.app",
+]
 
+# Allow Vercel preview deployments (e.g., pull request previews)
+def is_allowed_origin(origin):
+    if origin in ALLOWED_ORIGINS:
+        return True
+    # Allow Vercel preview URLs (format: project-hash-user.vercel.app)
+    if origin and origin.endswith('.vercel.app') and 'self-harm-detection' in origin:
+        return True
+    return False
+
+CORS(app, 
+     resources={
+         r"/api/*": {
+             "origins": ALLOWED_ORIGINS,
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+             "expose_headers": ["Content-Range", "X-Content-Range"],
+             "supports_credentials": True,
+             "max_age": 3600
+         }
+     })
 Talisman(app,
     force_https=False,
     strict_transport_security=False,
