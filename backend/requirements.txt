@@ -6,7 +6,8 @@ flask-talisman==1.1.0
 flask-socketio==5.4.1
 flasgger==0.9.7.1
 gunicorn==25.1.0
-eventlet==0.37.0
+gevent==24.2.1
+gevent-websocket==0.10.1
 python-dotenv==1.2.2
 python-jose==3.3.0
 supabase==2.28.2
