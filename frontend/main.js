@@ -300,7 +300,7 @@ function runAnalysis() {
   btn.disabled  = true;
 
  // ============ BACKEND API INTEGRATION ============
-  const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = 'https://self-harm-detection.onrender.com/api';
   let authToken = localStorage.getItem('auth_token');
 
   // Auto-login function
