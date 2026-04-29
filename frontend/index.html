@@ -181,7 +181,13 @@
             <p class="analyze-desc" data-i18n="text-desc">Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
             <label class="input-label" for="textInput" data-i18n="input-label">// INPUT TEXT</label>
             <textarea id="textInput" data-i18n-placeholder="text-placeholder" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
-            <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> <span data-i18n="btn-run">RUN ANALYSIS</span></button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+              <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> <span data-i18n="btn-run">RUN ANALYSIS</span></button>
+              <button class="analyze-btn btn-outline" id="voiceInputBtn" onclick="toggleVoiceInput()" title="Speak to fill the text box">
+                <span id="voiceIcon">🎙</span> <span id="voiceLabel">SPEAK</span>
+              </button>
+            </div>
+            <p id="voiceStatus" style="font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.4);margin-top:8px;display:none;"></p>
           </div>
           <div>
             <div id="result">
