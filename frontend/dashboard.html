@@ -420,6 +420,9 @@
         <button class="icon-tab" onclick="switchMode('voice')" data-tooltip="Voice Analysis">
           <i class="bi bi-mic"></i>
         </button>
+        <button class="icon-tab" onclick="switchMode('video')" data-tooltip="Video + Report">
+          <i class="bi bi-camera-video"></i>
+        </button>
       </div>
 
       <!-- MODE: TEXT ANALYSIS -->
@@ -467,6 +470,33 @@
             </div>
           </div>
         </div>
+
+        <!-- TEXT ANALYSIS COMPREHENSIVE REPORT -->
+        <div id="textReportContainer" style="display:none; margin-top: 30px;">
+          <!-- Executive Summary -->
+          <div style="background: linear-gradient(135deg, #1a237e, #1565c0); padding: 20px; border-radius: 0; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Executive Summary</div>
+            <div id="textExecutiveSummary" style="font-size: 14px; color: #fff; line-height: 1.6;"></div>
+          </div>
+
+          <!-- Concerns -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #C2002F; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(194,0,47,0.3);">Concerns Identified</div>
+            <div id="textConcernsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Recommendations -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #2A8A4A; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(42,138,74,0.3);">Recommendations</div>
+            <div id="textRecommendationsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Next Steps -->
+          <div style="background: #C2002F15; padding: 15px; border-left: 3px solid #C2002F;">
+            <div style="font-size: 12px; color: #ff6b8a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;">Next Steps</div>
+            <div id="textNextStepsList" style="font-size: 13px; color: #fff; line-height: 1.8;"></div>
+          </div>
+        </div>
       </div>
 
       <!-- MODE: FACIAL ANALYSIS -->
@@ -510,6 +540,39 @@
               <span class="badge-dot-anim"></span>
               Backend model integration in progress
             </div>
+          </div>
+        </div>
+
+        <!-- FACIAL ANALYSIS COMPREHENSIVE REPORT -->
+        <div id="facialReportContainer" style="display:none; margin-top: 30px;">
+          <!-- Executive Summary -->
+          <div style="background: linear-gradient(135deg, #1a237e, #1565c0); padding: 20px; border-radius: 0; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Executive Summary</div>
+            <div id="facialExecutiveSummary" style="font-size: 14px; color: #fff; line-height: 1.6;"></div>
+          </div>
+
+          <!-- Concerns -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #C2002F; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(194,0,47,0.3);">Concerns Identified</div>
+            <div id="facialConcernsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Areas for Improvement -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #D4A017; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(212,160,23,0.3);">Areas for Improvement</div>
+            <div id="facialImprovementsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Recommendations -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #2A8A4A; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(42,138,74,0.3);">Recommendations</div>
+            <div id="facialRecommendationsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Next Steps -->
+          <div style="background: #C2002F15; padding: 15px; border-left: 3px solid #C2002F;">
+            <div style="font-size: 12px; color: #ff6b8a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;">Next Steps</div>
+            <div id="facialNextStepsList" style="font-size: 13px; color: #fff; line-height: 1.8;"></div>
           </div>
         </div>
       </div>
@@ -558,6 +621,141 @@
         </div>
       </div>
 
+      <!-- VOICE ANALYSIS COMPREHENSIVE REPORT -->
+      <div id="voiceReportContainer" style="display:none; margin-top: 30px;">
+        <!-- Executive Summary -->
+        <div style="background: linear-gradient(135deg, #1a237e, #1565c0); padding: 20px; border-radius: 0; margin-bottom: 20px;">
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Executive Summary</div>
+          <div id="voiceExecutiveSummary" style="font-size: 14px; color: #fff; line-height: 1.6;"></div>
+        </div>
+
+        <!-- Concerns -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 12px; color: #C2002F; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(194,0,47,0.3);">Concerns Identified</div>
+          <div id="voiceConcernsList" style="font-size: 13px; line-height: 1.8;"></div>
+        </div>
+
+        <!-- Areas for Improvement -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 12px; color: #D4A017; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(212,160,23,0.3);">Areas for Improvement</div>
+          <div id="voiceImprovementsList" style="font-size: 13px; line-height: 1.8;"></div>
+        </div>
+
+        <!-- Recommendations -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 12px; color: #2A8A4A; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(42,138,74,0.3);">Recommendations</div>
+          <div id="voiceRecommendationsList" style="font-size: 13px; line-height: 1.8;"></div>
+        </div>
+
+        <!-- Next Steps -->
+        <div style="background: #C2002F15; padding: 15px; border-left: 3px solid #C2002F;">
+          <div style="font-size: 12px; color: #ff6b8a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;">Next Steps</div>
+          <div id="voiceNextStepsList" style="font-size: 13px; color: #fff; line-height: 1.8;"></div>
+        </div>
+      </div>
+    </div><!-- end modeVoice -->
+
+      <!-- MODE: VIDEO ANALYSIS + COMPREHENSIVE REPORT -->
+      <div class="mode-panel" id="modeVideo">
+        <div class="row g-4">
+          <!-- Video Upload Section -->
+          <div class="col-12">
+            <div class="card-label">// Video Upload</div>
+            <div style="padding: 20px; background: #161616; border: 2px dashed #444; border-radius: 8px; text-align: center; cursor: pointer;" id="videoDropZone" onDragOver="event.preventDefault(); event.currentTarget.style.borderColor='#C2002F';" onDragLeave="event.currentTarget.style.borderColor='#444';" onDrop="handleVideoDrop(event)">
+              <input type="file" id="videoInput" accept=".mp4,.mov,.avi,.mkv,.webm" style="display:none;" onchange="handleVideoSelect()">
+              <i class="bi bi-cloud-upload" style="font-size: 32px; color: #999; margin-bottom: 10px; display: block;"></i>
+              <div style="font-size: 14px; color: #ccc; margin-bottom: 10px;">Drag video here or <span style="color: #C2002F; cursor: pointer;" onclick="document.getElementById('videoInput').click();">click to select</span></div>
+              <div style="font-size: 11px; color: #666;">Supported: MP4, MOV, AVI, MKV, WebM</div>
+            </div>
+            <div id="videoError" style="display:none; color:#ff6b8a; font-size:12px; margin-top:10px;"></div>
+            <div id="videoProgress" style="display:none; margin-top: 10px;">
+              <div style="font-size: 12px; color: #ccc; margin-bottom: 5px;">Processing video...</div>
+              <div style="background: #0D0D0D; border-radius: 4px; height: 6px; overflow: hidden;">
+                <div id="videoProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #C2002F, #ff6b8a); transition: width 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Language Selection -->
+          <div class="col-12 col-md-6">
+            <label style="display: block; font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Language for Transcription</label>
+            <select id="voiceLanguage" style="width: 100%; padding: 10px; background: #0D0D0D; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 0;">
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="hi-IN">Hindi</option>
+              <option value="pa-IN">Punjabi</option>
+              <option value="es-ES">Spanish</option>
+              <option value="fr-FR">French</option>
+              <option value="de-DE">German</option>
+            </select>
+          </div>
+
+          <!-- Upload Button -->
+          <div class="col-12 col-md-6">
+            <label style="display: block; font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">&nbsp;</label>
+            <button onclick="uploadVideo()" id="uploadVideoBtn" style="width: 100%; padding: 10px; background: #C2002F; color: #fff; border: none; font-weight: bold; letter-spacing: 0.1em; cursor: pointer; border-radius: 0;" disabled>
+              <span id="uploadBtnText">SELECT VIDEO FIRST</span>
+              <span id="uploadBtnSpinner" style="display:none;"><i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i> UPLOADING...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Comprehensive Report Section (shown after analysis) -->
+        <div id="reportContainer" style="display:none; margin-top: 30px;">
+          <!-- Executive Summary -->
+          <div style="background: linear-gradient(135deg, #1a237e, #1565c0); padding: 20px; border-radius: 0; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.1em; margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Executive Summary</div>
+            <div id="executiveSummary" style="font-size: 14px; color: #fff; line-height: 1.6;"></div>
+          </div>
+
+          <!-- Overall Risk Assessment -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div style="background: #161616; padding: 15px; text-align: center; border-left: 3px solid #C2002F;">
+              <div style="font-size: 10px; color: #999; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">Overall Risk</div>
+              <div id="overallRisk" style="font-size: 24px; font-weight: bold; color: #C2002F;">—</div>
+            </div>
+            <div style="background: #161616; padding: 15px; text-align: center; border-left: 3px solid #D4A017;">
+              <div style="font-size: 10px; color: #999; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">Facial Risk</div>
+              <div id="facialRiskScore" style="font-size: 24px; font-weight: bold; color: #D4A017;">—</div>
+            </div>
+            <div style="background: #161616; padding: 15px; text-align: center; border-left: 3px solid #2A8A4A;">
+              <div style="font-size: 10px; color: #999; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">Voice Risk</div>
+              <div id="voiceRiskScore" style="font-size: 24px; font-weight: bold; color: #2A8A4A;">—</div>
+            </div>
+          </div>
+
+          <!-- Key Concerns -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #C2002F; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(194,0,47,0.3);">Concerns Identified</div>
+            <div id="concernsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Areas for Improvement -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #D4A017; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(212,160,23,0.3);">Areas for Improvement</div>
+            <div id="improvementsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Recommendations -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #2A8A4A; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid rgba(42,138,74,0.3);">Recommendations</div>
+            <div id="recommendationsList" style="font-size: 13px; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Next Steps -->
+          <div style="background: #C2002F15; padding: 15px; border-left: 3px solid #C2002F;">
+            <div style="font-size: 12px; color: #ff6b8a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;">Next Steps</div>
+            <div id="nextStepsList" style="font-size: 13px; color: #fff; line-height: 1.8;"></div>
+          </div>
+
+          <!-- Full Therapist Notes -->
+          <div style="margin-top: 20px; padding: 15px; background: #0D0D0D; border: 1px solid rgba(255,255,255,0.1); border-radius: 0;">
+            <div style="font-size: 12px; color: #999; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700;">Clinical Assessment Notes</div>
+            <div id="therapistNotes" style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.8; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- end unified card -->
   </div><!-- end main -->
   <!-- Floating button -->
@@ -594,6 +792,12 @@
   </div>
 </div>
 
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="config.js"></script>
   <script>
@@ -691,6 +895,11 @@ if (isTokenExpired(token)) {
           ? helplines.classList.add('show')
           : helplines.classList.remove('show');
 
+        // Display comprehensive report if available
+        if (data.comprehensive_report) {
+          displayTextReport(data.comprehensive_report);
+        }
+
       } catch(err) {
         errEl.textContent = 'Cannot connect to server. Make sure backend is running.';
         errEl.style.display = 'block';
@@ -769,6 +978,11 @@ if (isTokenExpired(token)) {
         set('emoAnxiety',  'emoAnxietyVal',  data.anxiety  || data.emotions?.anxiety);
         set('emoDistress', 'emoDistressVal', data.distress || data.emotions?.distress);
         set('emoCalm',     'emoCalmVal',     data.calm     || data.emotions?.calm);
+        
+        // Display comprehensive report if available
+        if (data.comprehensive_report) {
+          displayFacialReport(data.comprehensive_report);
+        }
       } catch(err) {
         document.getElementById('camError').textContent = 'Cannot connect to server.';
         document.getElementById('camError').style.display = 'block';
@@ -938,6 +1152,274 @@ function showResult() {
       <div class="result-tip">${result.tip.replace(/\n/g,'<br>')}</div>
       <button class="quiz-restart" onclick="openQuiz()"><i class="bi bi-arrow-clockwise me-2"></i> Take Again</button>
     </div>`;
+}
+
+// ============== VIDEO UPLOAD & REPORT HANDLER ==============
+let selectedVideoFile = null;
+
+function handleVideoDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '#444';
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    selectedVideoFile = files[0];
+    document.getElementById('videoInput').value = '';
+    updateVideoUploadUI();
+  }
+}
+
+function handleVideoSelect() {
+  const input = document.getElementById('videoInput');
+  if (input.files.length > 0) {
+    selectedVideoFile = input.files[0];
+    updateVideoUploadUI();
+  }
+}
+
+function updateVideoUploadUI() {
+  const allowed = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+  const ext = '.' + selectedVideoFile.name.split('.').pop().toLowerCase();
+  
+  if (!allowed.includes(ext)) {
+    showVideoError('Unsupported format. Allowed: ' + allowed.join(', '));
+    selectedVideoFile = null;
+    return;
+  }
+  
+  if (selectedVideoFile.size > 500 * 1024 * 1024) {
+    showVideoError('Video too large (max 500MB)');
+    selectedVideoFile = null;
+    return;
+  }
+
+  document.getElementById('videoError').style.display = 'none';
+  document.getElementById('uploadVideoBtn').disabled = false;
+  document.getElementById('uploadBtnText').textContent = 'UPLOAD: ' + selectedVideoFile.name.substring(0, 30);
+}
+
+function showVideoError(msg) {
+  const errEl = document.getElementById('videoError');
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+}
+
+async function uploadVideo() {
+  if (!selectedVideoFile) return;
+  
+  const formData = new FormData();
+  formData.append('file', selectedVideoFile);
+  formData.append('language', document.getElementById('voiceLanguage').value);
+
+  document.getElementById('uploadVideoBtn').disabled = true;
+  document.getElementById('uploadBtnText').style.display = 'none';
+  document.getElementById('uploadBtnSpinner').style.display = 'inline';
+  document.getElementById('videoProgress').style.display = 'block';
+  document.getElementById('reportContainer').style.display = 'none';
+
+  try {
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 50;
+        document.getElementById('videoProgressBar').style.width = percentComplete + '%';
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        const data = JSON.parse(xhr.responseText);
+        if (data.success) {
+          displayComprehensiveReport(data);
+          document.getElementById('videoProgress').style.display = 'none';
+        } else {
+          showVideoError('Analysis failed: ' + (data.error || 'Unknown error'));
+        }
+      } else if (xhr.status === 401) {
+        logout();
+      } else if (xhr.status === 429) {
+        showVideoError('Rate limit exceeded. Please wait a moment.');
+      } else {
+        showVideoError('Upload failed: HTTP ' + xhr.status);
+      }
+      
+      document.getElementById('uploadVideoBtn').disabled = false;
+      document.getElementById('uploadBtnText').style.display = 'inline';
+      document.getElementById('uploadBtnSpinner').style.display = 'none';
+    });
+
+    xhr.addEventListener('error', () => {
+      showVideoError('Network error. Check backend is running.');
+      document.getElementById('uploadVideoBtn').disabled = false;
+      document.getElementById('uploadBtnText').style.display = 'inline';
+      document.getElementById('uploadBtnSpinner').style.display = 'none';
+    });
+
+    xhr.open('POST', `${API}/analyze-video-upload`);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.send(formData);
+
+  } catch (err) {
+    showVideoError('Error: ' + err.message);
+    document.getElementById('uploadVideoBtn').disabled = false;
+    document.getElementById('uploadBtnText').style.display = 'inline';
+    document.getElementById('uploadBtnSpinner').style.display = 'none';
+  }
+}
+
+function displayTextReport(report) {
+  document.getElementById('textExecutiveSummary').textContent = 
+    report.executive_summary || 'Analysis complete. Review sections below for detailed findings.';
+  
+  const concerns = report.concerns || [];
+  document.getElementById('textConcernsList').innerHTML = concerns.length ? 
+    concerns.map(c => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(194,0,47,0.1); border-left: 2px solid #C2002F;"><div style="color: #ff6b8a; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">${c.severity || 'N/A'}</div><div>${c.description || ''}</div></div>`).join('') : 
+    '<div style="color: #2A8A4A;">No significant concerns identified.</div>';
+  
+  const recommendations = report.recommendations || [];
+  document.getElementById('textRecommendationsList').innerHTML = recommendations.length ?
+    recommendations.map(rec => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(42,138,74,0.1); border-left: 2px solid #2A8A4A;"><div style="color: #2A8A4A; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">[${rec.priority || 'N/A'}]</div><div>${rec.recommendation || ''}</div></div>`).join('') :
+    '<div style="color: #2A8A4A;">Continue current practices.</div>';
+  
+  const nextSteps = report.next_steps || [];
+  document.getElementById('textNextStepsList').innerHTML = nextSteps.length ?
+    nextSteps.map(step => `<div>• ${step}</div>`).join('') :
+    '<div>Continue regular monitoring.</div>';
+  
+  document.getElementById('textReportContainer').style.display = 'block';
+}
+
+function displayFacialReport(report) {
+  document.getElementById('facialExecutiveSummary').textContent = 
+    report.executive_summary || 'Facial analysis complete.';
+  
+  const concerns = report.concerns || [];
+  document.getElementById('facialConcernsList').innerHTML = concerns.length ? 
+    concerns.map(c => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(194,0,47,0.1); border-left: 2px solid #C2002F;"><div style="color: #ff6b8a; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">${c.severity || 'N/A'}</div><div>${c.description || ''}</div></div>`).join('') : 
+    '<div style="color: #2A8A4A;">Expressions appear regulated and appropriate.</div>';
+  
+  const improvements = report.areas_for_improvement || [];
+  document.getElementById('facialImprovementsList').innerHTML = improvements.length ?
+    improvements.map(imp => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(212,160,23,0.1); border-left: 2px solid #D4A017;"><div style="color: #D4A017; font-weight: bold; margin-bottom: 4px;">${imp.area || 'N/A'}</div><div style="font-size: 12px;">${imp.suggestion || ''}</div></div>`).join('') :
+    '<div style="color: #2A8A4A;">Positive emotional expression observed.</div>';
+  
+  const recommendations = report.recommendations || [];
+  document.getElementById('facialRecommendationsList').innerHTML = recommendations.length ?
+    recommendations.map(rec => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(42,138,74,0.1); border-left: 2px solid #2A8A4A;"><div style="color: #2A8A4A; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">[${rec.priority || 'N/A'}]</div><div>${rec.recommendation || ''}</div></div>`).join('') :
+    '<div style="color: #2A8A4A;">Maintain current emotional awareness.</div>';
+  
+  const nextSteps = report.next_steps || [];
+  document.getElementById('facialNextStepsList').innerHTML = nextSteps.length ?
+    nextSteps.map(step => `<div>• ${step}</div>`).join('') :
+    '<div>Continue self-monitoring.</div>';
+  
+  document.getElementById('facialReportContainer').style.display = 'block';
+}
+
+function displayVoiceReport(report) {
+  document.getElementById('voiceExecutiveSummary').textContent = 
+    report.executive_summary || 'Voice analysis complete.';
+  
+  const concerns = report.concerns || [];
+  document.getElementById('voiceConcernsList').innerHTML = concerns.length ? 
+    concerns.map(c => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(194,0,47,0.1); border-left: 2px solid #C2002F;"><div style="color: #ff6b8a; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">${c.severity || 'N/A'}</div><div>${c.description || ''}</div></div>`).join('') : 
+    '<div style="color: #2A8A4A;">Voice patterns appear stable.</div>';
+  
+  const improvements = report.areas_for_improvement || [];
+  document.getElementById('voiceImprovementsList').innerHTML = improvements.length ?
+    improvements.map(imp => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(212,160,23,0.1); border-left: 2px solid #D4A017;"><div style="color: #D4A017; font-weight: bold; margin-bottom: 4px;">${imp.area || 'N/A'}</div><div style="font-size: 12px;">${imp.suggestion || ''}</div></div>`).join('') :
+    '<div style="color: #2A8A4A;">Strong vocal engagement observed.</div>';
+  
+  const recommendations = report.recommendations || [];
+  document.getElementById('voiceRecommendationsList').innerHTML = recommendations.length ?
+    recommendations.map(rec => `<div style="margin-bottom: 10px; padding: 10px; background: rgba(42,138,74,0.1); border-left: 2px solid #2A8A4A;"><div style="color: #2A8A4A; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">[${rec.priority || 'N/A'}]</div><div>${rec.recommendation || ''}</div></div>`).join('') :
+    '<div style="color: #2A8A4A;">Continue vocal expression practices.</div>';
+  
+  const nextSteps = report.next_steps || [];
+  document.getElementById('voiceNextStepsList').innerHTML = nextSteps.length ?
+    nextSteps.map(step => `<div>• ${step}</div>`).join('') :
+    '<div>Continue voice monitoring.</div>';
+  
+  document.getElementById('voiceReportContainer').style.display = 'block';
+}
+
+function displayComprehensiveReport(data) {
+  const report = data.comprehensive_report || {};
+  
+  // Color coding based on risk level
+  const riskColors = {
+    'CRITICAL': '#E4032E',
+    'HIGH': '#ff6b8a',
+    'MEDIUM': '#D4A017',
+    'LOW': '#2A8A4A'
+  };
+
+  // Executive Summary
+  document.getElementById('executiveSummary').textContent = 
+    report.executive_summary || 'Analysis complete. Review sections below for detailed findings.';
+
+  // Overall Risk Score with color
+  const overallRisk = report.overall_risk_score || 0;
+  const overallLevel = report.overall_risk_level || 'UNKNOWN';
+  const color = riskColors[overallLevel] || '#fff';
+  
+  document.getElementById('overallRisk').textContent = (Math.round(overallRisk * 100)) + '%';
+  document.getElementById('overallRisk').style.color = color;
+
+  // Component Scores
+  const facial = data.facial_analysis || {};
+  const voice = data.voice_analysis || {};
+  
+  document.getElementById('facialRiskScore').textContent = 
+    (Math.round((facial.risk_score || 0) * 100)) + '%';
+  document.getElementById('voiceRiskScore').textContent = 
+    (Math.round((voice.risk_score || 0) * 100)) + '%';
+
+  // Concerns
+  const concerns = report.concerns || [];
+  document.getElementById('concernsList').innerHTML = concerns.length ? 
+    concerns.map(c => `
+      <div style="margin-bottom: 10px; padding: 10px; background: rgba(194,0,47,0.1); border-left: 2px solid #C2002F;">
+        <div style="color: #ff6b8a; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">${c.severity || 'N/A'}</div>
+        <div>${c.description || ''}</div>
+      </div>
+    `).join('') : 
+    '<div style="color: #2A8A4A;">No significant concerns identified. Keep up the positive patterns.</div>';
+
+  // Areas for Improvement
+  const improvements = report.areas_for_improvement || [];
+  document.getElementById('improvementsList').innerHTML = improvements.length ?
+    improvements.map(imp => `
+      <div style="margin-bottom: 10px; padding: 10px; background: rgba(212,160,23,0.1); border-left: 2px solid #D4A017;">
+        <div style="color: #D4A017; font-weight: bold; margin-bottom: 4px;">${imp.area || 'N/A'}</div>
+        <div style="font-size: 12px;">${imp.suggestion || ''}</div>
+      </div>
+    `).join('') :
+    '<div style="color: #2A8A4A;">Strong performance across all metrics.</div>';
+
+  // Recommendations
+  const recommendations = report.recommendations || [];
+  document.getElementById('recommendationsList').innerHTML = recommendations.length ?
+    recommendations.map(rec => `
+      <div style="margin-bottom: 10px; padding: 10px; background: rgba(42,138,74,0.1); border-left: 2px solid #2A8A4A;">
+        <div style="color: #2A8A4A; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 4px;">[${rec.priority || 'N/A'}]</div>
+        <div style="font-size: 13px;">${rec.recommendation || ''}</div>
+      </div>
+    `).join('') :
+    '<div style="color: #2A8A4A;">Continue current practices and maintain awareness.</div>';
+
+  // Next Steps
+  const nextSteps = report.next_steps || [];
+  document.getElementById('nextStepsList').innerHTML = nextSteps.length ?
+    nextSteps.map((step, idx) => `<div>• ${step}</div>`).join('') :
+    '<div>Schedule follow-up session to monitor progress.</div>';
+
+  // Therapist Notes (Clinical Assessment)
+  document.getElementById('therapistNotes').textContent = 
+    report.therapist_notes || 'Comprehensive clinical assessment to follow after expert review.';
+
+  // Show report container
+  document.getElementById('reportContainer').style.display = 'block';
 }
   </script>
 </body>

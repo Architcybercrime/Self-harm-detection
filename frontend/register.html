@@ -345,6 +345,8 @@
 
         if (response.ok) {
           // SUCCESS: account created, redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
           showAlert('Account created successfully! Redirecting to login...', 'success');
           setTimeout(() => window.location.href = 'login.html', 1200);
         } else {

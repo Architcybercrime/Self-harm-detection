@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
 import joblib, sys, datetime, uuid, shutil, secrets, base64, io
 import numpy as np
+from pathlib import Path
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 from supabase import create_client
@@ -196,10 +197,66 @@ async def ping(sid, data):
 
 # ── LOAD MODELS ──────────────────────────────────────
 _BASE = os.path.dirname(os.path.abspath(__file__))
-model = joblib.load(os.path.join(_BASE, 'model', 'risk_model.pkl'))
-tfidf = joblib.load(os.path.join(_BASE, 'model', 'tfidf_vectorizer.pkl'))
+
+model = None
+tfidf = None
+
+try:
+    model = joblib.load(os.path.join(_BASE, 'model', 'risk_model.pkl'))
+    tfidf = joblib.load(os.path.join(_BASE, 'model', 'tfidf_vectorizer.pkl'))
+except FileNotFoundError:
+    print('WARNING: Model files not found - using keyword-based fallback')
 
 prediction_log = []
+
+
+# ── KEYWORD-BASED FALLBACK ───────────────────────────
+def keyword_based_prediction(text, sentiment):
+    """Fallback risk scoring when trained model files are unavailable."""
+    text_lower = text.lower()
+
+    critical_keywords = [
+        'kill myself', 'kill me', 'end my life', 'want to die',
+        'suicide', 'commit suicide', 'end it all', 'not worth living',
+        'better off dead', 'take my life', 'ending my life',
+        'no reason to live', 'want to end', 'hang myself',
+        'overdose', 'slit my', 'cut myself', 'wanted to suicide',
+        'wanna suicide', 'kms', 'wanted suicide'
+    ]
+
+    high_risk_keywords = [
+        'hopeless', 'worthless', 'useless', 'burden',
+        'cant go on', "can't go on", 'give up', 'giving up',
+        'no point', 'pointless', 'meaningless', 'empty inside',
+        'trapped', 'suffering', 'no escape', 'cant take it',
+        "can't take it", 'wanna die', 'dying', 'death',
+        'helpless', 'depressed'
+    ]
+
+    medium_risk_keywords = [
+        'sad', 'crying', 'alone', 'lonely', 'tired', 'exhausted',
+        'cant sleep', "can't sleep", 'anxious', 'panic', 'scared',
+        'afraid', 'broken', 'numb', 'empty', 'lost', 'stressed'
+    ]
+
+    critical_count = sum(1 for kw in critical_keywords if kw in text_lower)
+    high_count = sum(1 for kw in high_risk_keywords if kw in text_lower)
+    medium_count = sum(1 for kw in medium_risk_keywords if kw in text_lower)
+
+    if critical_count >= 1 or high_count >= 2 or sentiment < -0.7:
+        risk_level = 'HIGH'
+        confidence = min(0.95, 0.80 + (critical_count * 0.05) + (high_count * 0.03))
+        alert = True
+    elif high_count >= 1 or medium_count >= 2 or sentiment < -0.3:
+        risk_level = 'MEDIUM'
+        confidence = min(0.85, 0.65 + (high_count * 0.05) + (medium_count * 0.02))
+        alert = False
+    else:
+        risk_level = 'LOW'
+        confidence = 0.75
+        alert = False
+
+    return risk_level, round(confidence, 4), alert
 
 # ── JWT + API KEY AUTH ────────────────────────────────
 security = HTTPBearer()
@@ -259,6 +316,35 @@ def run_prediction(text):
     scores    = get_sentiment_scores(text)
     sentiment = scores['compound']
     neg_score = scores['neg']
+
+    if model is None or tfidf is None:
+        risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
+        message = ('High risk indicators detected. Please seek professional support immediately.'
+                   if alert else 'No immediate concern detected. Continue monitoring.')
+
+        return {
+            "risk_level":      risk_level,
+            "confidence":      confidence,
+            "alert_triggered": alert,
+            "sentiment_score": round(sentiment, 4),
+            "message":         message,
+            "modality":        "text",
+            "risk_indicators": {
+                "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
+                "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
+                "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
+            },
+            "recommendations": {
+                "immediate_action":  alert,
+                "support_resources": [
+                    "iCall: 9152987821",
+                    "Vandrevala Foundation: 1860-2662-345",
+                    "AASRA: 9820466627"
+                ] if alert else [],
+                "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
+            },
+            "analysis_timestamp": datetime.datetime.now().isoformat()
+        }
 
     tfidf_vec  = tfidf.transform([cleaned]).toarray()
     X          = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
@@ -585,6 +671,28 @@ def analyze_speech(data: SpeechInput,
         return record_from_microphone(data.duration)
     raise HTTPException(status_code=400,
                         detail="Provide audio_path or use_microphone:true")
+
+
+@app.post("/api/analyze-speech-upload", tags=["Multimodal"])
+async def analyze_speech_upload(
+    current_user: str = Depends(verify_token),
+    file: UploadFile = File(...)
+):
+    """Analyze a browser-recorded audio file uploaded from the frontend."""
+    suffix = os.path.splitext(file.filename or "upload.webm")[1] or ".webm"
+    temp_path = f"temp_voice_{uuid.uuid4().hex[:8]}{suffix}"
+
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        result = analyze_audio_file(temp_path)
+        if isinstance(result, dict):
+            result["uploaded_from_browser"] = True
+        return result
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 # ── MULTIMODAL ───────────────────────────────────────
