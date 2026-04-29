@@ -46,3 +46,6 @@ slowapi==0.1.9
 moviepy==2.2.1
 imageio==2.37.3
 python-multipart==0.0.6
+# Facial analysis (requires Render instance with ≥1 GB RAM)
+tensorflow-cpu==2.18.0
+deepface==0.0.93
