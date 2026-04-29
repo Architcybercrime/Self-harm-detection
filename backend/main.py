@@ -20,20 +20,20 @@ warnings.filterwarnings('ignore')
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse, FileResponse
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
-import joblib, sys, datetime, uuid, shutil, secrets
+import joblib, sys, datetime, uuid, shutil, secrets, base64, io
 import numpy as np
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 from supabase import create_client
 
-load_dotenv('D:\\selfharm-project\\backend\\.env')
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.preprocess import full_preprocess, get_sentiment_scores
@@ -43,6 +43,11 @@ from utils.speech_analysis import analyze_audio_file, record_from_microphone
 from utils.fusion import fuse_risk_scores
 from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
 from utils.auth import register_user, login_user
+from utils.audit_log import (
+    log_prediction as audit_prediction,
+    log_api_key_event, log_unauthorized,
+    log_mfa_event, get_audit_logs,
+)
 
 # ── CONSTANTS ────────────────────────────────────────
 JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
@@ -103,6 +108,16 @@ class MultimodalInput(BaseModel):
     weights:        Optional[Dict] = None
 
 
+class MFAVerifyInput(BaseModel):
+    totp_code: str = Field(..., min_length=6, max_length=6)
+
+
+class MFALoginInput(BaseModel):
+    username:  str
+    password:  str
+    totp_code: str = Field(..., min_length=6, max_length=6)
+
+
 # ── FASTAPI APP ──────────────────────────────────────
 app = FastAPI(
     title       = "Self Harm Detection API",
@@ -137,10 +152,18 @@ Get your API key from `POST /api/keys/generate`
 )
 
 # ── CORS ─────────────────────────────────────────────
+_cors_env = os.getenv("ALLOWED_ORIGINS", "")
+_extra    = [o.strip() for o in _cors_env.split(",") if o.strip()]
+ALLOWED_ORIGINS = [
+    "http://localhost:3000", "http://127.0.0.1:3000",
+    "http://localhost:5000", "http://127.0.0.1:5000",
+    "http://localhost:8000", "http://127.0.0.1:8000",
+    "http://localhost:8501", "http://127.0.0.1:8501",
+] + _extra
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["http://localhost:3000", "http://127.0.0.1:8000",
-                         "http://localhost:5000", "http://localhost:8501"],
+    allow_origins     = ALLOWED_ORIGINS,
     allow_credentials = True,
     allow_methods     = ["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers     = ["Content-Type", "Authorization"],
@@ -172,8 +195,9 @@ async def ping(sid, data):
 
 
 # ── LOAD MODELS ──────────────────────────────────────
-model = joblib.load('model/risk_model.pkl')
-tfidf = joblib.load('model/tfidf_vectorizer.pkl')
+_BASE = os.path.dirname(os.path.abspath(__file__))
+model = joblib.load(os.path.join(_BASE, 'model', 'risk_model.pkl'))
+tfidf = joblib.load(os.path.join(_BASE, 'model', 'tfidf_vectorizer.pkl'))
 
 prediction_log = []
 
@@ -220,6 +244,13 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return username
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def run_prediction(text):
@@ -294,19 +325,31 @@ def register(data: RegisterInput):
 
 @app.post("/api/login", tags=["Authentication"])
 def login(data: LoginInput):
-    """Login and get JWT token"""
+    """Login and get JWT token. Returns mfa_required=true if MFA is enabled."""
     result = login_user(data.username, data.password)
-    if result['success']:
-        return result
-    raise HTTPException(status_code=401, detail=result['error'])
+    if not result['success']:
+        raise HTTPException(status_code=401, detail=result['error'])
+
+    # Check if MFA is enabled for this user
+    row = _get_totp_secret(data.username)
+    if row and row.get("is_enabled"):
+        return {
+            "success":      True,
+            "mfa_required": True,
+            "username":     data.username,
+            "message":      "MFA required — call POST /api/auth/mfa/login with your TOTP code",
+        }
+
+    return result
 
 
 # ── PREDICT ──────────────────────────────────────────
 @app.post("/api/predict", tags=["Prediction"])
-async def predict(data: TextInput,
+async def predict(data: TextInput, request: Request,
                   current_user: str = Depends(verify_token)):
     """Predict self-harm risk from text (92.2% accuracy)"""
     result = run_prediction(data.text)
+    ip     = get_client_ip(request)
 
     prediction_log.append({
         "timestamp":  datetime.datetime.now().isoformat(),
@@ -318,6 +361,8 @@ async def predict(data: TextInput,
                    result['confidence'], result['sentiment_score'])
     save_prediction(data.text, result['risk_level'], result['confidence'],
                     result['sentiment_score'], "text", result['alert_triggered'])
+    audit_prediction(current_user, result['risk_level'], "text",
+                     result['confidence'], ip=ip)
 
     if result['alert_triggered']:
         await sio.emit('high_risk_alert', {
@@ -432,6 +477,7 @@ def generate_api_key(current_user: str = Depends(verify_token)):
             "is_active": True
         }).execute()
 
+        log_api_key_event("API_KEY_GENERATED", current_user)
         return {
             "success":    True,
             "api_key":    api_key,
@@ -485,6 +531,7 @@ def revoke_api_key(current_user: str = Depends(verify_token)):
             .eq("username", current_user)\
             .execute()
 
+        log_api_key_event("API_KEY_REVOKED", current_user)
         return {"success": True, "message": "API key revoked successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -614,6 +661,227 @@ def profile(current_user: str = Depends(verify_token)):
         "message":  f"Welcome {current_user}!",
         "role":     "user"
     }
+
+
+# ── MFA / TOTP ───────────────────────────────────────
+def _get_totp_secret(username: str):
+    """Return the active TOTP secret for a user, or None."""
+    supabase = get_supabase()
+    try:
+        res = supabase.table("UserMFA")\
+            .select("totp_secret, is_enabled")\
+            .eq("username", username)\
+            .execute()
+        if res.data:
+            return res.data[0]
+    except Exception:
+        pass
+    return None
+
+
+@app.post("/api/auth/mfa/setup", tags=["MFA"])
+def mfa_setup(current_user: str = Depends(verify_token)):
+    """
+    Generate a new TOTP secret for the current user and return a QR-code
+    data-URI. The user must verify with /api/auth/mfa/verify-setup before
+    MFA is actually enabled.
+    """
+    try:
+        import pyotp, qrcode
+    except ImportError:
+        raise HTTPException(status_code=501,
+                            detail="MFA dependencies not installed (pyotp, qrcode)")
+
+    issuer = os.getenv("MFA_ISSUER", "SafeSignal")
+    secret = pyotp.random_base32()
+    uri    = pyotp.totp.TOTP(secret).provisioning_uri(
+                 name=current_user, issuer_name=issuer)
+
+    # Generate QR code as base64 data URI
+    img    = qrcode.make(uri)
+    buf    = io.BytesIO()
+    img.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+    supabase = get_supabase()
+    # Upsert pending secret (not yet enabled)
+    supabase.table("UserMFA").upsert({
+        "username":    current_user,
+        "totp_secret": secret,
+        "is_enabled":  False,
+    }).execute()
+
+    log_mfa_event("MFA_SETUP", current_user, success=True)
+    return {
+        "success":    True,
+        "secret":     secret,
+        "qr_code":    f"data:image/png;base64,{qr_b64}",
+        "message":    "Scan the QR code in your authenticator app, then call /api/auth/mfa/verify-setup with your 6-digit code."
+    }
+
+
+@app.post("/api/auth/mfa/verify-setup", tags=["MFA"])
+def mfa_verify_setup(data: MFAVerifyInput,
+                     current_user: str = Depends(verify_token)):
+    """Confirm the first TOTP code to activate MFA for the account."""
+    try:
+        import pyotp
+    except ImportError:
+        raise HTTPException(status_code=501, detail="pyotp not installed")
+
+    row = _get_totp_secret(current_user)
+    if not row:
+        raise HTTPException(status_code=400, detail="Run /api/auth/mfa/setup first")
+
+    totp = pyotp.TOTP(row["totp_secret"])
+    if not totp.verify(data.totp_code, valid_window=1):
+        log_mfa_event("MFA_FAILURE", current_user, success=False)
+        raise HTTPException(status_code=400, detail="Invalid TOTP code")
+
+    get_supabase().table("UserMFA")\
+        .update({"is_enabled": True})\
+        .eq("username", current_user)\
+        .execute()
+
+    log_mfa_event("MFA_ENABLED", current_user, success=True)
+    return {"success": True, "message": "MFA enabled successfully"}
+
+
+@app.post("/api/auth/mfa/disable", tags=["MFA"])
+def mfa_disable(data: MFAVerifyInput,
+                current_user: str = Depends(verify_token)):
+    """Disable MFA (requires a valid TOTP code to confirm)."""
+    try:
+        import pyotp
+    except ImportError:
+        raise HTTPException(status_code=501, detail="pyotp not installed")
+
+    row = _get_totp_secret(current_user)
+    if not row or not row.get("is_enabled"):
+        raise HTTPException(status_code=400, detail="MFA is not enabled")
+
+    totp = pyotp.TOTP(row["totp_secret"])
+    if not totp.verify(data.totp_code, valid_window=1):
+        log_mfa_event("MFA_FAILURE", current_user, success=False)
+        raise HTTPException(status_code=400, detail="Invalid TOTP code")
+
+    get_supabase().table("UserMFA")\
+        .update({"is_enabled": False, "totp_secret": None})\
+        .eq("username", current_user)\
+        .execute()
+
+    log_mfa_event("MFA_DISABLED", current_user, success=True)
+    return {"success": True, "message": "MFA disabled"}
+
+
+@app.get("/api/auth/mfa/status", tags=["MFA"])
+def mfa_status(current_user: str = Depends(verify_token)):
+    """Check whether MFA is enabled for the current user."""
+    row = _get_totp_secret(current_user)
+    enabled = bool(row and row.get("is_enabled"))
+    return {"success": True, "mfa_enabled": enabled, "username": current_user}
+
+
+@app.post("/api/auth/mfa/login", tags=["MFA"])
+def mfa_login(data: MFALoginInput, request: Request):
+    """
+    Second step of MFA login: verify TOTP code and return JWT token.
+    Call this after /api/login returns mfa_required=true.
+    """
+    try:
+        import pyotp
+    except ImportError:
+        raise HTTPException(status_code=501, detail="pyotp not installed")
+
+    from utils.auth import login_user as _login, verify_password as _vp
+    # Re-verify credentials first
+    result = _login(data.username, data.password)
+    if not result.get("success"):
+        raise HTTPException(status_code=401, detail=result.get("error", "Login failed"))
+
+    row = _get_totp_secret(data.username)
+    if not row or not row.get("is_enabled"):
+        # MFA not set up — just return token directly
+        return result
+
+    totp = pyotp.TOTP(row["totp_secret"])
+    if not totp.verify(data.totp_code, valid_window=1):
+        log_mfa_event("MFA_FAILURE", data.username,
+                      ip=get_client_ip(request), success=False)
+        raise HTTPException(status_code=401, detail="Invalid TOTP code")
+
+    log_mfa_event("MFA_ENABLED", data.username,
+                  ip=get_client_ip(request), success=True)
+    return result
+
+
+# ── ADMIN ────────────────────────────────────────────
+def require_admin(current_user: str = Depends(verify_token)):
+    """Restrict endpoint to users with role='admin' in the DB."""
+    supabase = get_supabase()
+    try:
+        result = supabase.table("Users")\
+            .select("role")\
+            .eq("username", current_user)\
+            .execute()
+        if not result.data or result.data[0].get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=403, detail="Admin access check failed")
+    return current_user
+
+
+@app.get("/api/admin/audit-logs", tags=["Admin"])
+def admin_audit_logs(
+    limit:      int = 100,
+    event_type: str = None,
+    username:   str = None,
+    admin_user: str = Depends(require_admin),
+):
+    """[Admin] Fetch structured security audit logs."""
+    return get_audit_logs(limit=limit, event_type=event_type, username=username)
+
+
+@app.get("/api/admin/analytics", tags=["Admin"])
+def admin_analytics(admin_user: str = Depends(require_admin)):
+    """[Admin] Aggregated risk analytics for the admin dashboard."""
+    supabase = get_supabase()
+    try:
+        rows = supabase.table("Predictions").select("*").execute().data or []
+        total      = len(rows)
+        high_risk  = sum(1 for r in rows if r.get("risk_level") == "HIGH")
+        alerts     = sum(1 for r in rows if r.get("alert"))
+        avg_conf   = round(sum(r["confidence"] for r in rows) / total, 4) if total else 0
+
+        by_modality: dict = {}
+        for r in rows:
+            m = r.get("modality", "unknown")
+            by_modality[m] = by_modality.get(m, 0) + 1
+
+        # Last 7 days daily counts
+        from collections import defaultdict
+        daily: dict = defaultdict(lambda: {"total": 0, "high": 0})
+        for r in rows:
+            day = (r.get("created_at") or r.get("timestamp") or "")[:10]
+            if day:
+                daily[day]["total"] += 1
+                if r.get("risk_level") == "HIGH":
+                    daily[day]["high"] += 1
+
+        return {
+            "success":           True,
+            "total_predictions": total,
+            "high_risk_count":   high_risk,
+            "alert_count":       alerts,
+            "avg_confidence":    avg_conf,
+            "high_risk_rate":    round(high_risk / total, 4) if total else 0,
+            "by_modality":       by_modality,
+            "daily_counts":      dict(sorted(daily.items())[-14:]),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── RUN ──────────────────────────────────────────────

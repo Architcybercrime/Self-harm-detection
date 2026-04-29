@@ -191,12 +191,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
   <script>
-    /* ─────────────────────────────────────────────
-       STEP 1: API base URL — this is Archit's backend
-       All requests go to http://127.0.0.1:5000/api
-    ───────────────────────────────────────────── */
-    const API = 'http://127.0.0.1:5000/api';
+    const API = API_BASE + '/api';
 
     /* ─────────────────────────────────────────────
        STEP 2: If user is already logged in
