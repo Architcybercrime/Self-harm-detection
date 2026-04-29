@@ -1,0 +1,15 @@
+.git
+.gitignore
+**/__pycache__
+**/*.pyc
+**/*.pkl
+backend/.env
+backend/data/*.csv
+backend/reports/
+backend/logs/
+frontend/
+docs/
+*.md
+.vscode/
+venv/
+.claude/
