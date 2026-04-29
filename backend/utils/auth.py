@@ -13,6 +13,7 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client
 from jose import jwt
+from utils.audit_log import log_login_success, log_login_failure, log_register
 
 load_dotenv()
 
@@ -54,6 +55,7 @@ def register_user(username, password):
             .execute()
 
         if existing.data:
+            log_register(username, success=False, reason="username already exists")
             return {"success": False, "error": "Username already exists"}
 
         hashed = hash_password(password)
@@ -63,9 +65,11 @@ def register_user(username, password):
             "role":     "user"
         }).execute()
 
+        log_register(username, success=True)
         return {"success": True, "message": f"User {username} registered successfully"}
 
     except Exception as e:
+        log_register(username, success=False, reason=str(e))
         return {"success": False, "error": str(e)}
 
 
@@ -96,11 +100,13 @@ def login_user(username, password):
             .execute()
 
         if not result.data:
+            log_login_failure(username, reason="user not found")
             return {"success": False, "error": "User not found"}
 
         user = result.data[0]
 
         if not verify_password(password, user['password']):
+            log_login_failure(username, reason="wrong password")
             return {"success": False, "error": "Invalid password"}
 
         token = jwt.encode({
@@ -111,6 +117,7 @@ def login_user(username, password):
             "type":  "access"
         }, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+        log_login_success(username)
         return {
             "success":      True,
             "access_token": token,
@@ -120,6 +127,7 @@ def login_user(username, password):
         }
 
     except Exception as e:
+        log_login_failure(username, reason=str(e))
         return {"success": False, "error": str(e)}
 
 
