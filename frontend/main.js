@@ -778,3 +778,55 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
     switchLang(this.textContent.trim());
   });
 });
+ /* ── BIO TAB SWITCHER ── */
+function bioSwitch(tab) {
+  const content  = document.getElementById('bioContent');
+  const bioImage = document.querySelector('.bio-image');
+  const tabs     = document.querySelectorAll('.bio-tab');
+
+  content.classList.add('fading');
+  document.getElementById('bioDefault').style.display = 'none';
+  document.getElementById('bioContent').style.display = 'block';
+  document.querySelector('.bio-tab-reset').style.display = 'block';
+
+  if (bioImage) bioImage.classList.add('zoomed');
+
+  setTimeout(() => {
+    if (tab === 'how') {
+      content.innerHTML = `
+        <div class="bio-steps">
+          <div class="bio-step"><span class="step-num">01</span><span class="step-text">User inputs text, social media post, or journal entry — or enables camera/microphone</span></div>
+          <div class="bio-step"><span class="step-num">02</span><span class="step-text">Text analysis — NLP model scans for emotional distress markers, tone shifts, and semantic risk patterns</span></div>
+          <div class="bio-step"><span class="step-num">03</span><span class="step-text">Facial analysis — DeepFace reads micro-expressions and affective states through the camera feed in real time</span></div>
+          <div class="bio-step"><span class="step-num">04</span><span class="step-text">Voice analysis — Librosa captures pitch stress, tremor, speech rate, and vocal energy from microphone input</span></div>
+          <div class="bio-step"><span class="step-num">05</span><span class="step-text">Multimodal fusion — all three signals are combined into one unified risk score</span></div>
+          <div class="bio-step"><span class="step-num">06</span><span class="step-text">Risk level determined — HIGH, MEDIUM, or LOW — with confidence score and support recommendations</span></div>
+        </div>`;
+    } else {
+      content.innerHTML = `
+        <div class="bio-steps">
+          <div class="bio-stat"><span class="stat-number">700,000+</span><span class="stat-desc">People die due to suicide every year globally</span></div>
+          <div class="bio-stat"><span class="stat-number">1 in 7</span><span class="stat-desc">Teens experience mental health struggles</span></div>
+          <div class="bio-stat"><span class="stat-number">~80%</span><span class="stat-desc">Of warning signs appear online first</span></div>
+          <div class="bio-stat"><span class="stat-number">4×</span><span class="stat-desc">Better outcomes with early intervention</span></div>
+        </div>`;
+    }
+    content.classList.remove('fading');
+    if (bioImage) setTimeout(() => bioImage.classList.remove('zoomed'), 300);
+  }, 350);
+
+  tabs.forEach((t, i) => {
+    const isActive = (tab === 'how' && i === 0) || (tab === 'stats' && i === 1);
+    t.classList.toggle('active', isActive);
+    t.querySelector('.dot').style.background = isActive ? 'var(--red)' : 'var(--muted)';
+  });
+}
+function bioReset() {
+  document.getElementById('bioDefault').style.display = 'block';
+  document.getElementById('bioContent').innerHTML = '';
+  document.querySelector('.bio-tab-reset').style.display = 'none';
+  document.querySelectorAll('.bio-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === 0);
+    t.querySelector('.dot').style.background = i === 0 ? 'var(--red)' : 'var(--muted)';
+  });
+}
