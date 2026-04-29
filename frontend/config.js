@@ -11,7 +11,6 @@
    ============================================================ */
 
 const API_BASE = (
-  // Injected by Vercel build step if VITE_API_URL env var is set
   (typeof __VITE_API_URL__ !== 'undefined' && __VITE_API_URL__)
-  || 'http://127.0.0.1:8000'   // ← replace with your Render URL for production
+  || 'https://safesignal-api.onrender.com'
 );
