@@ -19,13 +19,12 @@
    Each section has a comment explaining WHAT it does and WHY.
    The code immediately follows the comment.
    ============================================================ */
-
-
 /* ══════════════════════════════════════════════════════════
    1. SETUP
    GSAP plugins must be registered before use.
    ScrollTrigger connects GSAP animations to scroll position.
    ══════════════════════════════════════════════════════════ */
+
 gsap.registerPlugin(ScrollTrigger);
 
 
@@ -291,6 +290,131 @@ function displayResult(level, score, signals) {
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+const API_BASE = window.API_BASE || 'http://127.0.0.1:5000/api';
+let authToken = localStorage.getItem('auth_token');
+
+async function ensureAuth() {
+  if (authToken) return true;
+
+  try {
+    await fetch(`${API_BASE}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'demo', password: 'demo123' })
+    });
+  } catch (e) {}
+
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'demo', password: 'demo123' })
+  });
+
+  const data = await res.json();
+  if (data.access_token) {
+    authToken = data.access_token;
+    localStorage.setItem('auth_token', authToken);
+    return true;
+  }
+
+  return false;
+}
+
+function getScoreFromValue(value, min, max) {
+  const numeric = Number(value) || 0;
+  if (max <= min) return 0;
+  return Math.max(0, Math.min(100, ((numeric - min) / (max - min)) * 100));
+}
+
+function applyFaceResult(data) {
+  const bars = document.querySelectorAll('#tab-face .emotion-row');
+  const emotions = data.emotions || {};
+  const values = [
+    emotions.neutral ?? 0,
+    emotions.sad ?? 0,
+    emotions.fear ?? emotions.anxiety ?? 0,
+    (emotions.angry ?? 0) + (emotions.disgust ?? 0),
+    emotions.happy ?? emotions.calm ?? 0
+  ];
+
+  bars.forEach((row, index) => {
+    const pct = Math.max(0, Math.min(100, Number(values[index]) || 0));
+    const bar = row.querySelector('.emotion-bar');
+    const val = row.querySelector('.emotion-val');
+    if (bar) bar.style.width = pct + '%';
+    if (val) val.textContent = pct ? pct.toFixed(1) + '%' : '—';
+  });
+
+  document.getElementById('cameraStatus').textContent =
+    `${(data.risk_level || 'LOW').toUpperCase()} FACE ANALYSIS • ${data.dominant_emotion || 'UNKNOWN'}`;
+  document.querySelector('#tab-face .backend-badge span:last-child').textContent =
+    data.success ? 'FACE ANALYSIS COMPLETE' : 'FACE ANALYSIS FAILED';
+}
+
+function applyVoiceResult(data) {
+  const tempo = Number(data.tempo_bpm) || 0;
+  const pitch = Number(data.avg_pitch_hz) || 0;
+  const energy = Number(data.energy_level) || 0;
+  const risk = Number(data.speech_risk_score) || 0;
+  const acousticRisk = Number(data.acoustic_risk_score) || 0;
+  const textRisk = Number(data.text_risk_score) || 0;
+
+  const rows = document.querySelectorAll('#tab-voice .emotion-row');
+  const values = [
+    Math.max(0, Math.min(100, 100 - Math.abs(tempo - 90))),
+    Math.max(0, Math.min(100, (tempo / 180) * 100)),
+    Math.max(0, Math.min(100, risk * 100)),
+    Math.max(0, Math.min(100, (1 - energy) * 100)),
+    Math.max(0, Math.min(100, energy * 100))
+  ];
+
+  rows.forEach((row, index) => {
+    const bar = row.querySelector('.emotion-bar');
+    const val = row.querySelector('.emotion-val');
+    const pct = values[index] || 0;
+    if (bar) bar.style.width = pct + '%';
+    if (val) val.textContent = pct.toFixed(0) + '%';
+  });
+
+  // Show transcription and text-based risk if available
+  const transcripEl = document.getElementById('voiceTranscription');
+  if (data.transcription && data.transcription.length > 0 && !data.transcription.startsWith('Could not')) {
+    transcripEl.style.display = 'block';
+    document.getElementById('transcribedText').textContent = data.transcription;
+    
+    // Display risk signals
+    const signals = data.risk_signals || [];
+    const signalsHTML = signals.length > 0
+      ? signals.map(s => `<span class="result-tag">${s}</span>`).join('')
+      : '<span style="color:#999;">No risk indicators detected</span>';
+    document.getElementById('riskSignals').innerHTML = signalsHTML;
+    
+    // Show both risk scores
+    document.getElementById('acousticRiskVal').textContent = `${(acousticRisk * 100).toFixed(0)}%`;
+    document.getElementById('textRiskVal').textContent = `${(textRisk * 100).toFixed(0)}%`;
+    document.getElementById('combinedRiskVal').textContent = `${(risk * 100).toFixed(0)}% (${data.risk_level})`;
+    
+    // Color code the combined risk
+    const riskColor = 
+      data.risk_level === 'CRITICAL' ? '#E4032E' :
+      data.risk_level === 'HIGH' ? '#E4032E' :
+      data.risk_level === 'MEDIUM' ? '#D4A017' : '#2A8A4A';
+    document.getElementById('combinedRiskVal').style.color = riskColor;
+  } else {
+    transcripEl.style.display = 'none';
+  }
+
+  document.getElementById('micStatus').textContent =
+    `${(data.risk_level || 'LOW').toUpperCase()} VOICE ANALYSIS`;
+  document.querySelector('#tab-voice .backend-badge span:last-child').textContent =
+    data.success ? 'VOICE ANALYSIS COMPLETE' : 'VOICE ANALYSIS FAILED';
+
+  // Display comprehensive report if available
+  if (data.comprehensive_report && window.displayVoiceReport) {
+    window.displayVoiceReport(data.comprehensive_report);
+  }
+}
+
 function runAnalysis() {
   const text = document.getElementById('textInput').value.trim();
   if (!text) return;
@@ -298,34 +422,6 @@ function runAnalysis() {
   const btn = document.getElementById('analyzeBtn');
   btn.innerHTML = 'ANALYSING...';
   btn.disabled  = true;
-
- // ============ BACKEND API INTEGRATION ============
-const API_BASE = 'https://self-harm-detection.onrender.com/api';
-  let authToken = localStorage.getItem('auth_token');
-
-  // Auto-login function
-  async function ensureAuth() {
-    if (authToken) return true;
-    try {
-      await fetch(`${API_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'demo', password: 'demo123' })
-      });
-    } catch (e) {}
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'demo', password: 'demo123' })
-    });
-    const data = await res.json();
-    if (data.access_token) {
-      authToken = data.access_token;
-      localStorage.setItem('auth_token', authToken);
-      return true;
-    }
-    return false;
-  }
 
   // Call backend API
   ensureAuth()
@@ -496,18 +592,34 @@ document.querySelectorAll('.analyze-tab').forEach(tab => {
 });
 
 /* ── Camera (Facial tab) ── */
-let cameraStream = null;
+var cameraStream = null;
+let cameraAnalyzeTimer = null;
+let cameraAnalysisInterval = null;
 
-function startCamera() {
+async function startCamera() {
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => {
       cameraStream = stream;
       const video = document.getElementById('cameraFeed');
       video.srcObject = stream;
       document.getElementById('cameraWrap').classList.add('active');
-      document.getElementById('cameraStatus').textContent = 'FEED ACTIVE — AWAITING MODEL';
+      document.getElementById('cameraStatus').textContent = 'FEED ACTIVE — ANALYZING...';
       document.getElementById('startCameraBtn').style.display = 'none';
       document.getElementById('stopCameraBtn').style.display  = 'inline-flex';
+
+      if (cameraAnalyzeTimer) clearTimeout(cameraAnalyzeTimer);
+      if (cameraAnalysisInterval) clearInterval(cameraAnalysisInterval);
+      
+      // First capture after 500ms, then every 4 seconds to stay under the API rate limit
+      cameraAnalyzeTimer = setTimeout(() => {
+        captureAndAnalyseFace().catch(err => console.error(err));
+        // Start continuous capture at a steady pace that keeps updates live without 429s
+        cameraAnalysisInterval = setInterval(() => {
+          if (cameraStream) {
+            captureAndAnalyseFace().catch(err => console.error(err));
+          }
+        }, 4000);
+      }, 500);
     })
     .catch(() => {
       document.getElementById('cameraStatus').textContent = 'CAMERA ACCESS DENIED';
@@ -525,6 +637,43 @@ function stopCamera() {
   document.getElementById('cameraStatus').textContent = 'AWAITING FEED';
   document.getElementById('startCameraBtn').style.display = 'inline-flex';
   document.getElementById('stopCameraBtn').style.display  = 'none';
+  if (cameraAnalyzeTimer) {
+    clearTimeout(cameraAnalyzeTimer);
+    cameraAnalyzeTimer = null;
+  }
+  if (cameraAnalysisInterval) {
+    clearInterval(cameraAnalysisInterval);
+    cameraAnalysisInterval = null;
+  }
+}
+
+async function captureAndAnalyseFace() {
+  if (!cameraStream) return;
+
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageBase64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+  await ensureAuth();
+  const res = await fetch(`${API_BASE}/analyze-face`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`
+    },
+    body: JSON.stringify({ image_base64: imageBase64 })
+  });
+
+  if (res.status === 429) {
+    document.getElementById('cameraStatus').textContent = 'TOO MANY REQUESTS — SLOWING DOWN';
+    return;
+  }
+
+  const data = await res.json();
+  applyFaceResult(data);
 }
 
 /* ── Microphone (Voice tab) ── */
@@ -533,17 +682,63 @@ let micAnalyser = null;
 let micAnimFrame = null;
 let micTimerInterval = null;
 let micSeconds = 0;
+let micRecorder = null;
+let micChunks = [];
+let micStopTimeout = null;
+let micAudioContext = null;
+let micContinuousInterval = null;
+let micIsRecording = false;
 
-function startMic() {
+async function uploadVoiceBlob(blob) {
+  await ensureAuth();
+  const formData = new FormData();
+  formData.append('file', blob, 'voice.webm');
+
+  const res = await fetch(`${API_BASE}/analyze-speech-upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${authToken}`
+    },
+    body: formData
+  });
+
+  const data = await res.json();
+  applyVoiceResult(data);
+}
+
+function startContinuousVoiceAnalysis() {
+  if (!micRecorder || micIsRecording) return;
+  
+  micRecorder.start();
+  micIsRecording = true;
+  micChunks = [];
+  
+  // Stop recording after 5 seconds and upload
+  micStopTimeout = setTimeout(async () => {
+    if (micRecorder && micIsRecording) {
+      micRecorder.stop();
+      micIsRecording = false;
+      
+      // Wait for onstop handler to upload, then start a new recording
+      setTimeout(() => {
+        if (micStream) {
+          startContinuousVoiceAnalysis();
+        }
+      }, 500);
+    }
+  }, 5000);
+}
+
+async function startMic() {
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
       micStream = stream;
       micSeconds = 0;
 
       // Web Audio visualiser
-      const ctx     = new (window.AudioContext || window.webkitAudioContext)();
-      const source  = ctx.createMediaStreamSource(stream);
-      micAnalyser   = ctx.createAnalyser();
+      micAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source  = micAudioContext.createMediaStreamSource(stream);
+      micAnalyser   = micAudioContext.createAnalyser();
       micAnalyser.fftSize = 32;
       source.connect(micAnalyser);
 
@@ -569,9 +764,31 @@ function startMic() {
       }, 1000);
 
       document.getElementById('micWrap').classList.add('recording');
-      document.getElementById('micStatus').textContent = 'RECORDING — AWAITING MODEL';
+      document.getElementById('micStatus').textContent = 'RECORDING — LIVE VOICE ANALYSIS';
       document.getElementById('startMicBtn').style.display = 'none';
       document.getElementById('stopMicBtn').style.display  = 'inline-flex';
+
+      micRecorder = new MediaRecorder(stream);
+      micRecorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) micChunks.push(event.data);
+      };
+      
+      const recorderRef = micRecorder;
+      micRecorder.onstop = async () => {
+        try {
+          if (micChunks.length > 0) {
+            const blob = new Blob(micChunks, { type: recorderRef.mimeType || 'audio/webm' });
+            document.getElementById('micStatus').textContent = 'ANALYZING VOICE CLIP...';
+            await uploadVoiceBlob(blob);
+            document.getElementById('micStatus').textContent = 'RECORDING — LIVE VOICE ANALYSIS';
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      };
+
+      // Start continuous 5-second chunks for live analysis
+      startContinuousVoiceAnalysis();
     })
     .catch(() => {
       document.getElementById('micStatus').textContent = 'MICROPHONE ACCESS DENIED';
@@ -579,9 +796,27 @@ function startMic() {
 }
 
 function stopMic() {
+  if (micStopTimeout) {
+    clearTimeout(micStopTimeout);
+    micStopTimeout = null;
+  }
+
+  if (micContinuousInterval) {
+    clearInterval(micContinuousInterval);
+    micContinuousInterval = null;
+  }
+
+  if (micRecorder && micRecorder.state !== 'inactive') {
+    micRecorder.stop();
+  }
+
+  micIsRecording = false;
+
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
   if (micTimerInterval) { clearInterval(micTimerInterval); micTimerInterval = null; }
+  if (micAudioContext) { micAudioContext.close(); micAudioContext = null; }
+  micRecorder = null;
 
   // Reset bars to idle state
   document.querySelectorAll('.mic-bar').forEach((bar, i) => {
@@ -590,7 +825,9 @@ function stopMic() {
   });
 
   document.getElementById('micWrap').classList.remove('recording');
-  document.getElementById('micStatus').textContent  = 'READY TO RECORD';
+  if (document.getElementById('micStatus').textContent !== 'VOICE ANALYSIS FAILED') {
+    document.getElementById('micStatus').textContent  = 'READY TO RECORD';
+  }
   document.getElementById('micTimer').textContent   = '00:00';
   document.getElementById('startMicBtn').style.display = 'inline-flex';
   document.getElementById('stopMicBtn').style.display  = 'none';
