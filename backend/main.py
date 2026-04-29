@@ -27,7 +27,7 @@ from fastapi.responses import JSONResponse, FileResponse
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
-import joblib, sys, datetime, uuid, shutil, secrets, base64, io
+import joblib, sys, datetime, uuid, shutil, secrets, base64, io, csv
 import numpy as np
 from pathlib import Path
 from jose import JWTError, jwt
@@ -49,6 +49,7 @@ from utils.audit_log import (
     log_api_key_event, log_unauthorized,
     log_mfa_event, get_audit_logs,
 )
+from utils.alerts import dispatch_high_risk_alert
 
 # ── CONSTANTS ────────────────────────────────────────
 JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
@@ -117,6 +118,16 @@ class MFALoginInput(BaseModel):
     username:  str
     password:  str
     totp_code: str = Field(..., min_length=6, max_length=6)
+
+
+class UserProfileInput(BaseModel):
+    display_name:    Optional[str] = None
+    alert_email:     Optional[str] = None
+    alert_phone:     Optional[str] = None
+    alert_whatsapp:  Optional[str] = None
+    email_alerts:    Optional[bool] = None
+    sms_alerts:      Optional[bool] = None
+    whatsapp_alerts: Optional[bool] = None
 
 
 # ── FASTAPI APP ──────────────────────────────────────
@@ -310,8 +321,8 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def run_prediction(text):
-    """Helper to run ML prediction on text."""
+def run_prediction(text, explain: bool = False):
+    """Helper to run ML prediction on text. Set explain=True for SHAP top words."""
     cleaned   = full_preprocess(text)
     scores    = get_sentiment_scores(text)
     sentiment = scores['compound']
@@ -357,7 +368,28 @@ def run_prediction(text):
     message    = ('High risk indicators detected. Please seek professional support immediately.'
                   if alert else 'No immediate concern detected. Continue monitoring.')
 
-    return {
+    # SHAP explanation — fast for linear models
+    top_words = []
+    try:
+        import shap
+        feature_names = tfidf.get_feature_names_out().tolist() + ["sentiment", "neg_score"]
+        explainer     = shap.LinearExplainer(model, X, feature_perturbation="interventional")
+        shap_vals     = explainer.shap_values(X)
+        # shap_vals shape: (n_classes, n_samples, n_features) or (n_samples, n_features)
+        if isinstance(shap_vals, list):
+            # index 1 = "suicide" class (positive label)
+            vals = shap_vals[1][0] if len(shap_vals) > 1 else shap_vals[0][0]
+        else:
+            vals = shap_vals[0]
+        top_idx   = np.argsort(np.abs(vals))[::-1][:8]
+        top_words = [
+            {"word": feature_names[i], "impact": round(float(vals[i]), 4)}
+            for i in top_idx if abs(vals[i]) > 1e-6
+        ]
+    except Exception:
+        pass
+
+    result = {
         "risk_level":      risk_level,
         "confidence":      confidence,
         "alert_triggered": alert,
@@ -380,6 +412,9 @@ def run_prediction(text):
         },
         "analysis_timestamp": datetime.datetime.now().isoformat()
     }
+    if top_words:
+        result["explanation"] = {"top_words": top_words}
+    return result
 
 
 # ── HEALTH ───────────────────────────────────────────
@@ -457,6 +492,21 @@ async def predict(data: TextInput, request: Request,
             "message":    result['message'],
             "timestamp":  datetime.datetime.now().isoformat()
         })
+        # Fire email/SMS/WhatsApp alerts if user has a profile configured
+        try:
+            supabase = get_supabase()
+            prof_res = supabase.table("UserProfiles")\
+                .select("*").eq("username", current_user).execute()
+            profile  = prof_res.data[0] if prof_res.data else None
+            dispatch_high_risk_alert(
+                username=current_user,
+                confidence=result['confidence'],
+                modality="text",
+                text_snippet=data.text[:200],
+                profile=profile,
+            )
+        except Exception:
+            pass
 
     return result
 
@@ -990,6 +1040,137 @@ def admin_analytics(admin_user: str = Depends(require_admin)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── USER PROFILES (alert settings + longitudinal data) ───
+@app.get("/api/user/profile", tags=["User"])
+def get_user_profile(current_user: str = Depends(verify_token)):
+    """Get user alert preferences and profile."""
+    supabase = get_supabase()
+    try:
+        res = supabase.table("UserProfiles")\
+            .select("*").eq("username", current_user).execute()
+        if res.data:
+            return {"success": True, "profile": res.data[0]}
+        return {"success": True, "profile": {
+            "username": current_user,
+            "display_name": None,
+            "alert_email": None, "alert_phone": None, "alert_whatsapp": None,
+            "email_alerts": False, "sms_alerts": False, "whatsapp_alerts": False,
+        }}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/user/profile", tags=["User"])
+def update_user_profile(data: UserProfileInput,
+                        current_user: str = Depends(verify_token)):
+    """Update alert preferences (email, SMS, WhatsApp)."""
+    supabase = get_supabase()
+    update   = {k: v for k, v in data.dict().items() if v is not None}
+    if not update:
+        return {"success": True, "message": "Nothing to update"}
+    update["username"]   = current_user
+    update["updated_at"] = datetime.datetime.now().isoformat()
+    try:
+        supabase.table("UserProfiles").upsert(update).execute()
+        return {"success": True, "message": "Profile updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/user/risk-trend", tags=["User"])
+def user_risk_trend(days: int = 30, current_user: str = Depends(verify_token)):
+    """Return daily aggregated risk scores for the last N days (longitudinal view)."""
+    supabase = get_supabase()
+    try:
+        since = (datetime.datetime.utcnow() -
+                 datetime.timedelta(days=days)).isoformat()
+        rows = supabase.table("Predictions")\
+            .select("risk_level,confidence,created_at")\
+            .eq("username", current_user)\
+            .gte("created_at", since)\
+            .order("created_at")\
+            .execute().data or []
+
+        from collections import defaultdict
+        daily: dict = defaultdict(lambda: {"total": 0, "high": 0, "avg_confidence": 0.0})
+        for r in rows:
+            day = (r.get("created_at") or "")[:10]
+            if not day:
+                continue
+            daily[day]["total"]          += 1
+            daily[day]["avg_confidence"] += r.get("confidence", 0)
+            if r.get("risk_level") == "HIGH":
+                daily[day]["high"] += 1
+
+        trend = []
+        for day, d in sorted(daily.items()):
+            trend.append({
+                "date":           day,
+                "total":          d["total"],
+                "high_risk":      d["high"],
+                "avg_confidence": round(d["avg_confidence"] / d["total"], 4) if d["total"] else 0,
+            })
+        return {"success": True, "days": days, "trend": trend}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── BATCH CSV UPLOAD ─────────────────────────────────
+@app.post("/api/predict-batch", tags=["Prediction"])
+async def predict_batch(
+    current_user: str = Depends(verify_token),
+    file: UploadFile = File(...),
+):
+    """
+    Batch risk analysis from a CSV file.
+    The CSV must have a column named 'text' (first column is used as fallback).
+    Returns a JSON array with risk results for each row (max 500 rows).
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Upload a .csv file")
+
+    content = await file.read()
+    try:
+        decoded = content.decode('utf-8-sig')  # handles BOM
+    except UnicodeDecodeError:
+        decoded = content.decode('latin-1')
+
+    reader   = csv.DictReader(io.StringIO(decoded))
+    fieldnames = reader.fieldnames or []
+    text_col   = 'text' if 'text' in fieldnames else (fieldnames[0] if fieldnames else None)
+
+    if not text_col:
+        raise HTTPException(status_code=400, detail="CSV must have at least one column")
+
+    results = []
+    for i, row in enumerate(reader):
+        if i >= 500:
+            break
+        text = (row.get(text_col) or "").strip()
+        if not text:
+            results.append({"row": i + 1, "text": "", "error": "empty"})
+            continue
+        try:
+            r = run_prediction(text)
+            results.append({
+                "row":         i + 1,
+                "text":        text[:100],
+                "risk_level":  r["risk_level"],
+                "confidence":  r["confidence"],
+                "alert":       r["alert_triggered"],
+            })
+        except Exception as e:
+            results.append({"row": i + 1, "text": text[:100], "error": str(e)})
+
+    high_count = sum(1 for r in results if r.get("risk_level") == "HIGH")
+    return {
+        "success":        True,
+        "total_rows":     len(results),
+        "high_risk_rows": high_count,
+        "results":        results,
+    }
 
 
 # ── RUN ──────────────────────────────────────────────

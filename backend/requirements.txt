@@ -27,7 +27,6 @@ Werkzeug==3.1.6
 cryptography==46.0.5
 python-dateutil==2.9.0.post0
 opencv-python-headless==4.10.0.84
-pillow>=9.2.0,<12.0
 librosa==0.11.0
 soundfile==0.13.1
 audioread==3.1.0
@@ -43,9 +42,17 @@ fastapi==0.115.12
 uvicorn[standard]==0.34.0
 python-socketio==5.12.1
 slowapi==0.1.9
+# Alerts
+sendgrid==6.11.0
+twilio==9.4.5
+# Explainability
+shap==0.46.0
+# Multipart / video
 moviepy==2.2.1
 imageio==2.37.3
 python-multipart==0.0.6
-# Facial analysis (requires Render instance with ≥1 GB RAM)
+# DeepFace
 tensorflow-cpu==2.18.0
 deepface==0.0.93
+# Pillow pinned for moviepy compatibility
+pillow>=9.2.0,<12.0
