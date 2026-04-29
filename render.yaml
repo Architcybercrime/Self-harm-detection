@@ -3,9 +3,9 @@ services:
   - type: web
     name: safesignal-api
     runtime: python
-    buildCommand: pip install -r backend/requirements.txt && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('stopwords')"
-    startCommand: cd backend && uvicorn main:socket_app --host 0.0.0.0 --port $PORT
-    rootDir: .
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('stopwords')"
+    startCommand: uvicorn main:socket_app --host 0.0.0.0 --port $PORT
     envVars:
       - key: SUPABASE_URL
         sync: false
