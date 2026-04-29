@@ -267,6 +267,24 @@
                 <div class="emotion-row"><span class="emotion-name">FLAT AFFECT</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
                 <div class="emotion-row"><span class="emotion-name">VOCAL ENERGY</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
               </div>
+              
+              <!-- TRANSCRIPTION & TEXT-BASED RISK -->
+              <div id="voiceTranscription" style="display:none; margin-top:20px; padding:12px; background:#f5f5f5; border-radius:4px; font-size:13px;">
+                <div style="font-weight:bold; margin-bottom:8px; color:#333;">TRANSCRIBED TEXT</div>
+                <div id="transcribedText" style="font-style:italic; color:#666; margin-bottom:12px; min-height:20px;">—</div>
+                
+                <div style="font-weight:bold; margin-bottom:8px; color:#333;">SEMANTIC RISK SIGNALS</div>
+                <div id="riskSignals" style="margin-bottom:12px;"></div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+                  <div><span style="color:#999;">Acoustic Risk:</span> <span id="acousticRiskVal" style="font-weight:bold;">—</span></div>
+                  <div><span style="color:#999;">Text Risk:</span> <span id="textRiskVal" style="font-weight:bold;">—</span></div>
+                </div>
+                <div style="margin-top:8px; font-weight:bold;">
+                  <span style="color:#999;">Combined Risk:</span> <span id="combinedRiskVal" style="font-weight:bold;">—</span>
+                </div>
+              </div>
+              
               <div class="backend-badge">
                 <span class="badge-dot"></span>
                 <span data-i18n="backend-badge">BACKEND INTEGRATION IN PROGRESS</span>
@@ -298,7 +316,6 @@
       </div>
     </div>
   </footer>
-
-  <script src="main.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@ import time
 import os
 
 # ── CONFIG ───────────────────────────────────────────
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 
 st.set_page_config(
     page_title="Self Harm Detection System",
@@ -29,10 +29,10 @@ st.markdown("""
 # ── HELPERS ──────────────────────────────────────────
 def get_headers():
     token = st.session_state.get('token', '')
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}'
-    }
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    return headers
 
 
 def api_post(endpoint, data):

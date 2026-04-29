@@ -20,8 +20,55 @@ except ImportError:
     SR_AVAILABLE = False
 
 
-def analyze_audio_file(audio_path):
-    """Analyze audio file for speech features."""
+def analyze_text_risk_from_speech(text):
+    """
+    Analyze transcribed text for self-harm risk using keywords.
+    Returns text-based risk score (0-1).
+    """
+    if not text or text.startswith("Could not") or text.startswith("Speech recognition"):
+        return 0.0, "NO_TEXT", []
+    
+    text_lower = text.lower()
+    
+    # CRITICAL keywords
+    critical = ['kill myself', 'kill me', 'end my life', 'want to die', 'suicide', 
+                'end it all', 'not worth living', 'better off dead']
+    # HIGH risk keywords
+    high = ['hopeless', 'worthless', 'useless', 'burden', 'give up', 'no point', 
+            'pointless', 'meaningless', 'trapped', 'suffering', 'no escape', 'helpless']
+    # MEDIUM risk keywords
+    medium = ['sad', 'lonely', 'tired', 'exhausted', 'anxious', 'panic', 'afraid', 
+              'broken', 'numb', 'empty', 'lost', 'stressed']
+    
+    found_signals = []
+    critical_count = sum(1 for kw in critical if kw in text_lower)
+    high_count = sum(1 for kw in high if kw in text_lower)
+    medium_count = sum(1 for kw in medium if kw in text_lower)
+    
+    if critical_count > 0:
+        found_signals.extend([kw for kw in critical if kw in text_lower])
+    if high_count > 0:
+        found_signals.extend([kw for kw in high if kw in text_lower])
+    
+    # Calculate text-based risk
+    if critical_count >= 1 or high_count >= 2:
+        text_risk = min(0.95, 0.75 + (critical_count * 0.15))
+        text_level = "HIGH"
+    elif high_count >= 1 or medium_count >= 2:
+        text_risk = min(0.70, 0.50 + (high_count * 0.15))
+        text_level = "MEDIUM"
+    else:
+        text_risk = 0.2 + (medium_count * 0.08)
+        text_level = "LOW"
+    
+    return float(np.clip(text_risk, 0, 1)), text_level, found_signals[:3]
+
+
+def analyze_audio_file(audio_path, language="en-US"):
+    """
+    Analyze audio file for speech features AND transcribed text risk.
+    Supports multilingual transcription: en-US, hi-IN (Hindi), pa-IN (Punjabi), etc.
+    """
     if not LIBROSA_AVAILABLE:
         return {"error": "librosa not installed"}
 
@@ -32,7 +79,7 @@ def analyze_audio_file(audio_path):
         pitch      = extract_pitch(y, sample_rate)
         energy     = extract_energy(y)
         mfcc_score = extract_mfcc_features(y, sample_rate)
-        risk_score = calculate_speech_risk(tempo, pitch, energy)
+        acoustic_risk = calculate_speech_risk(tempo, pitch, energy)
 
         result = {
             "success":           True,
@@ -40,14 +87,33 @@ def analyze_audio_file(audio_path):
             "avg_pitch_hz":      round(float(pitch), 2),
             "energy_level":      round(float(energy), 4),
             "mfcc_variance":     round(float(mfcc_score), 4),
-            "speech_risk_score": round(float(risk_score), 4),
-            "risk_level":        get_speech_risk_level(risk_score),
-            "interpretation":    interpret_speech(tempo, pitch, energy)
+            "acoustic_risk_score": round(float(acoustic_risk), 4),
+            "acoustic_risk_level": get_speech_risk_level(acoustic_risk),
+            "interpretation":    interpret_speech(tempo, pitch, energy),
+            "language":          language
         }
 
+        # Transcribe and analyze text in specified language
+        transcription = ""
         if SR_AVAILABLE:
-            transcription = transcribe_audio(audio_path)
+            transcription = transcribe_audio(audio_path, language=language)
             result["transcription"] = transcription
+            
+            text_risk, text_level, signals = analyze_text_risk_from_speech(transcription)
+            result["text_risk_score"] = round(float(text_risk), 4)
+            result["text_risk_level"] = text_level
+            result["risk_signals"] = signals
+            
+            # Combine acoustic + text risk (60% acoustic, 40% text)
+            combined_risk = (acoustic_risk * 0.6) + (text_risk * 0.4)
+            result["speech_risk_score"] = round(float(combined_risk), 4)
+            result["risk_level"] = get_speech_risk_level(combined_risk)
+            result["risk_source"] = "acoustic + semantic"
+        else:
+            # Fallback: use acoustic alone
+            result["speech_risk_score"] = round(float(acoustic_risk), 4)
+            result["risk_level"] = get_speech_risk_level(acoustic_risk)
+            result["risk_source"] = "acoustic only"
 
         return result
 
@@ -162,8 +228,11 @@ def interpret_speech(tempo, pitch, energy):
     return " | ".join(notes)
 
 
-def transcribe_audio(audio_path):
-    """Convert speech to text using Google Speech Recognition."""
+def transcribe_audio(audio_path, language="en-US"):
+    """
+    Convert speech to text using Google Speech Recognition.
+    Supports multiple languages: en-US, hi-IN (Hindi), pa-IN (Punjabi), etc.
+    """
     if not SR_AVAILABLE:
         return "Speech recognition not available"
 
@@ -171,7 +240,8 @@ def transcribe_audio(audio_path):
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_path) as source:
             audio = recognizer.listen(source)
-            text = recognizer.recognize_google(audio)
+            # Google Speech Recognition API supports language codes
+            text = recognizer.recognize_google(audio, language=language)
             return text
     except sr.UnknownValueError:
         return "Could not understand audio"
