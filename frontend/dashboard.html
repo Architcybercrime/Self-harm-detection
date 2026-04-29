@@ -321,10 +321,10 @@
 
       .ss-card, .chart-card, .stat-card { padding: 18px; }
     }
-    .quiz-fab { position:fixed; bottom:32px; left:240px; background:var(--ss-red); color:#fff; border:none; padding:12px 20px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; z-index:200; transition:background 0.2s,transform 0.2s; box-shadow:0 4px 24px rgba(194,0,47,0.4); }
+    .quiz-fab { position:fixed; top:24px; right:24px; background:var(--ss-red); color:#fff; border:none; padding:12px 20px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; z-index:200; transition:background 0.2s,transform 0.2s; box-shadow:0 4px 24px rgba(194,0,47,0.4); }
 .quiz-fab:hover { background:#a00026; transform:translateY(-2px); }
 .quiz-fab i { font-size:16px; }
-@media (max-width:768px) { .quiz-fab { left:20px; bottom:20px; } }
+@media (max-width:768px) { .quiz-fab { top:16px; right:16px; } }
 .quiz-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:999; display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
 .quiz-overlay.open { display:flex; animation:fadeIn 0.2s ease; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
