@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: safesignal-backend
+    runtime: python
+    pythonVersion: 3.11
+    plan: standard
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r backend/requirements.txt
+    startCommand: >
+      gunicorn --worker-class eventlet -w 1 
+      --bind 0.0.0.0:$PORT --timeout 300 
+      --access-logfile - --error-logfile - 
+      backend.wsgi:app
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: JWT_SECRET_KEY
+        sync: false  # Set via Render dashboard
+      - key: SUPABASE_URL
+        sync: false  # Set via Render dashboard
+      - key: SUPABASE_KEY
+        sync: false  # Set via Render dashboard
+      - key: MAX_UPLOAD_SIZE
+        value: "500"
+      - key: LOG_LEVEL
+        value: INFO
+    routes:
+      - path: /
+        matchType: exact
+        statusCode: 404
+      - path: /api
+        matchType: prefix
+
+  - type: static_site
+    name: safesignal-frontend
+    buildCommand: echo "Static site - no build needed"
+    staticPublishPath: frontend
+    routes:
+      - path: /
+        matchType: prefix
