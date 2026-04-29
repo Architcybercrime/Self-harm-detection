@@ -290,7 +290,7 @@ function displayResult(level, score, signals) {
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-const API_BASE = window.API_BASE || 'http://127.0.0.1:5000/api';
+const API_BASE = (typeof window.API_BASE !== 'undefined' ? window.API_BASE : 'https://safesignal-api.onrender.com') + '/api';
 let authToken = localStorage.getItem('auth_token');
 
 async function ensureAuth() {
@@ -456,6 +456,67 @@ function runAnalysis() {
 document.getElementById('textInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.ctrlKey) runAnalysis();
 });
+
+
+/* ── Voice Input (Web Speech API) ───────────────────────── */
+let _voiceRecog = null;
+let _voiceActive = false;
+
+function toggleVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const statusEl = document.getElementById('voiceStatus');
+  const iconEl   = document.getElementById('voiceIcon');
+  const labelEl  = document.getElementById('voiceLabel');
+  const btn      = document.getElementById('voiceInputBtn');
+
+  if (!SpeechRecognition) {
+    statusEl.textContent = 'Voice input not supported in this browser. Try Chrome.';
+    statusEl.style.display = 'block';
+    return;
+  }
+
+  if (_voiceActive && _voiceRecog) {
+    _voiceRecog.stop();
+    return;
+  }
+
+  _voiceRecog = new SpeechRecognition();
+  _voiceRecog.lang = 'en-US';
+  _voiceRecog.interimResults = true;
+  _voiceRecog.maxAlternatives = 1;
+
+  _voiceRecog.onstart = () => {
+    _voiceActive = true;
+    iconEl.textContent  = '⏹';
+    labelEl.textContent = 'STOP';
+    btn.style.borderColor = '#E4032E';
+    statusEl.textContent  = 'Listening… speak now';
+    statusEl.style.display = 'block';
+  };
+
+  _voiceRecog.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript)
+      .join('');
+    document.getElementById('textInput').value = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      statusEl.textContent = 'Captured. Click RUN ANALYSIS to proceed.';
+    }
+  };
+
+  _voiceRecog.onerror = (e) => {
+    statusEl.textContent = `Voice error: ${e.error}`;
+  };
+
+  _voiceRecog.onend = () => {
+    _voiceActive = false;
+    iconEl.textContent  = '🎙';
+    labelEl.textContent = 'SPEAK';
+    btn.style.borderColor = '';
+  };
+
+  _voiceRecog.start();
+}
 
 
 /* ══════════════════════════════════════════════════════════
