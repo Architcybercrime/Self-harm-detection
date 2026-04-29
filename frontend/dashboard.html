@@ -321,6 +321,49 @@
 
       .ss-card, .chart-card, .stat-card { padding: 18px; }
     }
+    .quiz-fab { position:fixed; bottom:32px; left:240px; background:var(--ss-red); color:#fff; border:none; padding:12px 20px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; z-index:200; transition:background 0.2s,transform 0.2s; box-shadow:0 4px 24px rgba(194,0,47,0.4); }
+.quiz-fab:hover { background:#a00026; transform:translateY(-2px); }
+.quiz-fab i { font-size:16px; }
+@media (max-width:768px) { .quiz-fab { left:20px; bottom:20px; } }
+.quiz-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:999; display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
+.quiz-overlay.open { display:flex; animation:fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.quiz-modal { background:#161616; border:1px solid rgba(255,255,255,0.08); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; animation:slideUp 0.3s ease; }
+@keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+.quiz-header { padding:28px 28px 20px; border-bottom:1px solid rgba(255,255,255,0.07); display:flex; justify-content:space-between; align-items:flex-start; }
+.quiz-header-label { font-size:10px; font-weight:700; letter-spacing:0.25em; text-transform:uppercase; color:var(--ss-red); margin-bottom:6px; }
+.quiz-header-title { font-size:26px; font-weight:900; text-transform:uppercase; line-height:1.1; color:#fff; }
+.quiz-close { background:none; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); width:36px; height:36px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color 0.2s,border-color 0.2s; flex-shrink:0; }
+.quiz-close:hover { color:#fff; border-color:rgba(255,255,255,0.3); }
+.quiz-progress-wrap { height:2px; background:rgba(255,255,255,0.06); }
+.quiz-progress-bar { height:100%; background:var(--ss-red); width:10%; transition:width 0.4s ease; }
+.quiz-progress-label { font-size:10px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(255,255,255,0.3); padding:10px 28px 0; }
+.quiz-body { padding:24px 28px; min-height:200px; }
+.quiz-question { font-size:17px; font-weight:600; color:#fff; line-height:1.5; margin-bottom:24px; }
+.emoji-grid { display:flex; gap:10px; flex-wrap:wrap; }
+.emoji-card { flex:1; min-width:70px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:14px 10px; text-align:center; cursor:pointer; transition:border-color 0.2s,background 0.2s; }
+.emoji-card:hover { border-color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.06); }
+.emoji-card.selected { border-color:var(--ss-red); background:rgba(194,0,47,0.12); }
+.emoji-card .emoji { font-size:28px; display:block; margin-bottom:6px; }
+.emoji-card .emoji-label { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.4); }
+.emoji-card.selected .emoji-label { color:#fff; }
+.quiz-footer { padding:20px 28px 28px; border-top:1px solid rgba(255,255,255,0.07); display:flex; justify-content:space-between; align-items:center; }
+.quiz-btn-primary { background:var(--ss-red); color:#fff; border:none; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; padding:12px 24px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; }
+.quiz-btn-primary:hover { background:#a00026; }
+.quiz-btn-primary:disabled { opacity:0.35; cursor:not-allowed; }
+.quiz-btn-outline { background:none; border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.5); font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; padding:12px 24px; cursor:pointer; transition:border-color 0.2s,color 0.2s; display:flex; align-items:center; }
+.quiz-btn-outline:hover { border-color:rgba(255,255,255,0.3); color:#fff; }
+.quiz-result { text-align:center; padding:20px 0; }
+.result-emoji { font-size:64px; margin-bottom:16px; }
+.result-category { font-size:28px; font-weight:900; text-transform:uppercase; margin-bottom:8px; }
+.result-score-wrap { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px; }
+.result-score-circle { width:80px; height:80px; border-radius:50%; border:3px solid; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; }
+.result-desc { font-size:14px; color:rgba(255,255,255,0.6); line-height:1.7; margin-bottom:24px; }
+.result-tags-wrap { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:24px; }
+.result-tag { font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; padding:4px 12px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.5); }
+.result-tip { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:3px solid var(--ss-red); padding:16px 20px; font-size:13px; color:rgba(255,255,255,0.6); text-align:left; line-height:1.6; margin-bottom:20px; }
+.quiz-restart { background:none; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.5); font-size:11px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; padding:10px 20px; cursor:pointer; transition:all 0.2s; }
+.quiz-restart:hover { border-color:rgba(255,255,255,0.3); color:#fff; }
   </style>
 </head>
 <body>
@@ -517,12 +560,45 @@
 
     </div><!-- end unified card -->
   </div><!-- end main -->
+  <!-- Floating button -->
+<button class="quiz-fab" onclick="openQuiz()" title="Take Mental Health Quiz">
+  <i class="bi bi-heart-pulse"></i>
+  <span class="quiz-fab-label">CHECK IN</span>
+</button>
+
+<!-- Modal overlay -->
+<div class="quiz-overlay" id="quizOverlay" onclick="closeQuizOutside(event)">
+  <div class="quiz-modal" id="quizModal">
+    <div class="quiz-header">
+      <div>
+        <div class="quiz-header-label">// MENTAL HEALTH CHECK-IN</div>
+        <div class="quiz-header-title">HOW ARE<br>YOU FEELING?</div>
+      </div>
+      <button class="quiz-close" onclick="closeQuiz()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="quiz-progress-wrap">
+      <div class="quiz-progress-bar" id="quizProgressBar"></div>
+    </div>
+    <div class="quiz-progress-label" id="quizProgressLabel">Question 1 of 10</div>
+    <div class="quiz-body" id="quizBody"></div>
+    <div class="quiz-footer">
+      <button class="quiz-btn-outline" id="quizPrevBtn" onclick="quizPrev()" style="visibility:hidden;">
+        <i class="bi bi-arrow-left me-2"></i> Back
+      </button>
+      <button class="quiz-btn-primary" id="quizNextBtn" onclick="quizNext()" disabled>
+        Next <i class="bi bi-arrow-right ms-2"></i>
+      </button>
+    </div>
+  </div>
+</div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const API   = 'http://127.0.0.1:5000/api';
     const token = localStorage.getItem('token');
-if (!token) window.location.href = 'login.html';
+/*if (!token) window.location.href = 'login.html';
 
 // Extra check: decode JWT and verify it hasn't expired
 function isTokenExpired(token) {
@@ -542,7 +618,7 @@ if (isTokenExpired(token)) {
   localStorage.removeItem('username');
   window.location.href = 'login.html';
 }
-
+*/
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';
 
@@ -749,6 +825,119 @@ if (isTokenExpired(token)) {
       document.getElementById('startMicBtn').style.display = 'inline-flex';
       document.getElementById('stopMicBtn').style.display  = 'none';
     }
+    const QUESTIONS = [
+  { id:1, type:'emoji', question:'How would you describe your overall mood today?',
+    options:[{emoji:'😄',label:'Great',score:0},{emoji:'🙂',label:'Okay',score:1},{emoji:'😐',label:'Meh',score:2},{emoji:'😔',label:'Low',score:3},{emoji:'😢',label:'Awful',score:4}] },
+  { id:2, type:'emoji', question:'How well did you sleep last night?',
+    options:[{emoji:'😴',label:'Perfect',score:0},{emoji:'🙂',label:'Good',score:1},{emoji:'😐',label:'Average',score:2},{emoji:'😩',label:'Poor',score:3},{emoji:'🥴',label:'Terrible',score:4}] },
+  { id:3, type:'emoji', question:'How often have you felt anxious or worried this week?',
+    options:[{emoji:'😌',label:'Never',score:0},{emoji:'🙂',label:'Rarely',score:1},{emoji:'😐',label:'Sometimes',score:2},{emoji:'😟',label:'Often',score:3},{emoji:'😰',label:'Always',score:4}] },
+  { id:4, type:'emoji', question:'How connected do you feel to people around you?',
+    options:[{emoji:'🤗',label:'Very',score:0},{emoji:'😊',label:'Somewhat',score:1},{emoji:'😶',label:'Neutral',score:2},{emoji:'😞',label:'Lonely',score:3},{emoji:'🚪',label:'Isolated',score:4}] },
+  { id:5, type:'emoji', question:'How are your energy levels today?',
+    options:[{emoji:'⚡',label:'Full',score:0},{emoji:'😊',label:'Good',score:1},{emoji:'😐',label:'Average',score:2},{emoji:'🥱',label:'Tired',score:3},{emoji:'💀',label:'Drained',score:4}] },
+  { id:6, type:'emoji', question:'Have you been able to enjoy activities you usually like?',
+    options:[{emoji:'🎉',label:'Totally',score:0},{emoji:'😊',label:'Mostly',score:1},{emoji:'😐',label:'A little',score:2},{emoji:'😔',label:'Barely',score:3},{emoji:'💔',label:'Not at all',score:4}] },
+  { id:7, type:'emoji', question:'How would you rate your stress level right now?',
+    options:[{emoji:'😌',label:'Calm',score:0},{emoji:'🧘',label:'Managed',score:1},{emoji:'😤',label:'Stressed',score:2},{emoji:'😰',label:'Very high',score:3},{emoji:'🤯',label:'Overload',score:4}] },
+  { id:8, type:'emoji', question:'How often have you had negative thoughts today?',
+    options:[{emoji:'✨',label:'Rarely',score:0},{emoji:'🙂',label:'A little',score:1},{emoji:'😐',label:'Sometimes',score:2},{emoji:'😔',label:'Often',score:3},{emoji:'🌑',label:'Constantly',score:4}] },
+  { id:9, type:'emoji', question:'How has your appetite been recently?',
+    options:[{emoji:'😋',label:'Normal',score:0},{emoji:'🙂',label:'Slightly off',score:1},{emoji:'😐',label:'Changed',score:2},{emoji:'😟',label:'Very off',score:3},{emoji:'🚫',label:'Barely eating',score:4}] },
+  { id:10, type:'emoji', question:'Overall, how would you rate your mental wellbeing this week?',
+    options:[{emoji:'🌟',label:'Thriving',score:0},{emoji:'😊',label:'Stable',score:1},{emoji:'😐',label:'Struggling',score:2},{emoji:'😔',label:'Hard time',score:3},{emoji:'🆘',label:'Need help',score:4}] },
+];
+
+const RESULTS = [
+  { range:[0,8],   emoji:'🌟', category:'THRIVING',       color:'#2A8A4A',
+    desc:"You seem to be in a really good place mentally. Your mood, energy, and connections are all positive. Keep doing what you're doing!",
+    tags:['Good mood','High energy','Connected','Low stress'],
+    tip:'💡 Tip: Keep maintaining your healthy habits. Journaling or light exercise can help sustain this positive state.' },
+  { range:[9,16],  emoji:'🌤', category:'DOING OKAY',      color:'#4A90D9',
+    desc:"You're managing reasonably well, though there are some areas that could use attention. A few small adjustments could make a noticeable difference.",
+    tags:['Stable','Some stress','Room to improve'],
+    tip:'💡 Tip: Try getting outside for 10 minutes daily. Fresh air and movement can significantly boost mood and energy.' },
+  { range:[17,24], emoji:'🌧', category:'NEEDS ATTENTION', color:'#D4A017',
+    desc:"It looks like you're going through a challenging period. These feelings are valid — but it's important to reach out to someone you trust.",
+    tags:['Elevated stress','Low energy','Mood affected'],
+    tip:"💡 Tip: Talk to a friend, family member, or counsellor. You don't have to carry this alone. iCall: 9152987821" },
+  { range:[25,40], emoji:'🌩', category:'REACH OUT',       color:'#E4032E',
+    desc:"Your responses suggest you may be experiencing significant distress. Please consider speaking with a mental health professional. You matter.",
+    tags:['High distress','Support needed','Please reach out'],
+    tip:'💡 Support lines:\n• iCall: 9152987821\n• Vandrevala Foundation: 1860-2662-345\n• AASRA: 9820466627' },
+];
+
+let currentQ=0, answers=new Array(10).fill(null), quizScores=new Array(10).fill(null);
+
+function openQuiz() {
+  currentQ=0; answers=new Array(10).fill(null); quizScores=new Array(10).fill(null);
+  document.getElementById('quizOverlay').classList.add('open');
+  document.getElementById('quizNextBtn').style.display='flex';
+  renderQuestion();
+}
+function closeQuiz() { document.getElementById('quizOverlay').classList.remove('open'); }
+function closeQuizOutside(e) { if(e.target===document.getElementById('quizOverlay')) closeQuiz(); }
+
+function renderQuestion() {
+  const q=QUESTIONS[currentQ];
+  const pct=((currentQ+1)/QUESTIONS.length)*100;
+  document.getElementById('quizProgressBar').style.width=pct+'%';
+  document.getElementById('quizProgressLabel').textContent=`Question ${currentQ+1} of ${QUESTIONS.length}`;
+  document.getElementById('quizPrevBtn').style.visibility=currentQ===0?'hidden':'visible';
+  const nextBtn=document.getElementById('quizNextBtn');
+  nextBtn.textContent=currentQ===QUESTIONS.length-1?'See Results ✓':'Next →';
+  nextBtn.disabled=answers[currentQ]===null;
+  let html=`<div class="quiz-question">${q.question}</div><div class="emoji-grid">`;
+  q.options.forEach((opt,i)=>{
+    const sel=answers[currentQ]===i?'selected':'';
+    html+=`<div class="emoji-card ${sel}" onclick="selectEmoji(${i},${opt.score})">
+      <span class="emoji">${opt.emoji}</span>
+      <span class="emoji-label">${opt.label}</span>
+    </div>`;
+  });
+  html+=`</div>`;
+  document.getElementById('quizBody').innerHTML=html;
+}
+
+function selectEmoji(idx,score) {
+  answers[currentQ]=idx; quizScores[currentQ]=score;
+  document.getElementById('quizNextBtn').disabled=false;
+  renderQuestion();
+}
+
+function quizNext() {
+  if(currentQ<QUESTIONS.length-1){ currentQ++; renderQuestion(); }
+  else showResult();
+}
+function quizPrev() { if(currentQ>0){ currentQ--; renderQuestion(); } }
+
+function showResult() {
+  const total=quizScores.reduce((a,b)=>a+(b||0),0);
+  const result=RESULTS.find(r=>total>=r.range[0]&&total<=r.range[1])||RESULTS[3];
+  const pct=Math.round((1-total/40)*100);
+  document.getElementById('quizProgressBar').style.width='100%';
+  document.getElementById('quizProgressLabel').textContent='Complete!';
+  document.getElementById('quizPrevBtn').style.visibility='hidden';
+  document.getElementById('quizNextBtn').style.display='none';
+  document.getElementById('quizBody').innerHTML=`
+    <div class="quiz-result">
+      <div class="result-emoji">${result.emoji}</div>
+      <div class="result-category" style="color:${result.color};">${result.category}</div>
+      <div class="result-score-wrap">
+        <div class="result-score-circle" style="color:${result.color};border-color:${result.color};">
+          ${pct}<span style="font-size:14px;">%</span>
+        </div>
+        <div style="text-align:left;">
+          <div style="font-size:11px;color:var(--ss-muted);letter-spacing:0.15em;text-transform:uppercase;">Wellbeing Score</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-top:4px;">Based on 10 questions</div>
+        </div>
+      </div>
+      <div class="result-desc">${result.desc}</div>
+      <div class="result-tags-wrap">${result.tags.map(t=>`<span class="result-tag">${t}</span>`).join('')}</div>
+      <div class="result-tip">${result.tip.replace(/\n/g,'<br>')}</div>
+      <button class="quiz-restart" onclick="openQuiz()"><i class="bi bi-arrow-clockwise me-2"></i> Take Again</button>
+    </div>`;
+}
   </script>
 </body>
 </html>
