@@ -49,12 +49,17 @@
           <div class="bio-section">
             <div class="bio-image-wrap"><div class="bio-image"></div></div>
             <div class="bio-text">
-              <p data-i18n="bio-p1">Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
-              <p data-i18n="bio-p2">Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
-              <div class="bio-tabs">
-                <div class="bio-tab active"><div class="dot"></div><span data-i18n="tab-how">HOW IT WORKS</span></div>
-                <div class="bio-tab"><div class="dot" style="background:var(--muted)"></div><span data-i18n="tab-stats">STATS</span></div>
+             <div id="bioDefault">
+                <p data-i18n="bio-p1">Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
+                <p data-i18n="bio-p2">Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
               </div>
+              <div class="bio-tabs">
+                <div class="bio-tab active" onclick="bioSwitch('how')"><div class="dot"></div><span data-i18n="tab-how">HOW IT WORKS</span></div>
+                <div class="bio-tab" onclick="bioSwitch('stats')"><div class="dot" style="background:var(--muted)"></div><span data-i18n="tab-stats">STATS</span></div>
+                <div class="bio-tab-reset" onclick="bioReset()">↩ back</div>
+              </div>
+              <div class="bio-tab-content" id="bioContent">
+                
             </div>
           </div>
           <div class="hs-hint"><span data-i18n="hint-scroll">SCROLL</span>
