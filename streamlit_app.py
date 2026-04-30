@@ -53,6 +53,15 @@ def api_get(endpoint):
         return {"error": str(e)}, 500
 
 
+def api_put(endpoint, data):
+    try:
+        r = requests.put(f"{API_URL}{endpoint}",
+                         json=data, headers=get_headers(), timeout=10)
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
 def download_report(text):
     try:
         r = requests.post(
@@ -295,6 +304,9 @@ with st.sidebar:
             "🔑 API Keys",
             "🛡️ Admin Analytics",
             "🔐 MFA Settings",
+            "🔔 Alert Settings",
+            "📉 Risk Trend",
+            "📂 Batch CSV",
         ])
 
     st.divider()
@@ -1148,3 +1160,173 @@ elif page == "🔐 MFA Settings":
                         st.error(res.get("detail", "Invalid code — try again"))
                 else:
                     st.warning("Enter a valid 6-digit code")
+
+
+# ── ALERT SETTINGS ───────────────────────────────────
+elif page == "🔔 Alert Settings":
+    st.title("🔔 Alert Settings")
+    st.markdown("Configure where high-risk alerts are sent (email, SMS, WhatsApp).")
+    st.divider()
+
+    prof_data, pcode = api_get("/api/user/profile")
+    profile = prof_data.get("profile", {}) if pcode == 200 else {}
+
+    with st.form("alert_settings_form"):
+        st.subheader("Contact Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            alert_email = st.text_input("Alert Email",
+                value=profile.get("alert_email") or "",
+                placeholder="you@example.com")
+            alert_phone = st.text_input("SMS Phone Number (with country code)",
+                value=profile.get("alert_phone") or "",
+                placeholder="+919876543210")
+        with col2:
+            alert_whatsapp = st.text_input("WhatsApp Number (with country code)",
+                value=profile.get("alert_whatsapp") or "",
+                placeholder="+919876543210")
+            display_name = st.text_input("Display Name",
+                value=profile.get("display_name") or "")
+
+        st.subheader("Enable / Disable Channels")
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            email_on = st.checkbox("📧 Email Alerts",
+                value=bool(profile.get("email_alerts")))
+        with col4:
+            sms_on = st.checkbox("💬 SMS Alerts",
+                value=bool(profile.get("sms_alerts")))
+        with col5:
+            wa_on = st.checkbox("📱 WhatsApp Alerts",
+                value=bool(profile.get("whatsapp_alerts")))
+
+        submitted = st.form_submit_button("💾 Save Settings", type="primary")
+        if submitted:
+            payload = {
+                "display_name":    display_name or None,
+                "alert_email":     alert_email or None,
+                "alert_phone":     alert_phone or None,
+                "alert_whatsapp":  alert_whatsapp or None,
+                "email_alerts":    email_on,
+                "sms_alerts":      sms_on,
+                "whatsapp_alerts": wa_on,
+            }
+            res, code = api_put("/api/user/profile", payload)
+            if code == 200 and res.get("success"):
+                st.success("✅ Alert settings saved!")
+            else:
+                st.error(f"Error saving settings: {res.get('detail', code)}")
+
+    st.divider()
+    st.info(
+        "**How alerts work:**\n"
+        "- When the model detects HIGH risk, it immediately fires all enabled channels.\n"
+        "- Email is sent via SendGrid; SMS and WhatsApp via Twilio.\n"
+        "- You must add your API keys to Render environment variables:\n"
+        "  `SENDGRID_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`"
+    )
+
+
+# ── RISK TREND ───────────────────────────────────────
+elif page == "📉 Risk Trend":
+    st.title("📉 Your Risk Trend")
+    st.markdown("Longitudinal view of your prediction history over time.")
+    st.divider()
+
+    days = st.slider("Days to look back", min_value=7, max_value=90, value=30, step=7)
+    trend_data, tcode = api_get(f"/api/user/risk-trend?days={days}")
+
+    if tcode != 200 or not trend_data.get("success"):
+        st.error("Could not fetch trend data — make sure you are logged in.")
+    else:
+        trend = trend_data.get("trend", [])
+        if not trend:
+            st.info("No predictions found in this time window. Run some analyses first!")
+        else:
+            try:
+                import altair as alt
+                import pandas as pd
+                df = pd.DataFrame(trend)
+                df["date"] = pd.to_datetime(df["date"])
+
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Analyses", sum(r["total"] for r in trend))
+                col2.metric("High-Risk Days",
+                            sum(1 for r in trend if r["high_risk"] > 0))
+                col3.metric("Peak Confidence",
+                            f"{max(r['avg_confidence'] for r in trend):.1%}")
+
+                st.subheader("Daily Prediction Volume")
+                bar = alt.Chart(df).mark_bar(color="#1e88e5").encode(
+                    x=alt.X("date:T", title="Date"),
+                    y=alt.Y("total:Q", title="Predictions"),
+                    tooltip=["date:T", "total:Q", "high_risk:Q"],
+                ).properties(height=250)
+                st.altair_chart(bar, use_container_width=True)
+
+                st.subheader("High-Risk Count Over Time")
+                line = alt.Chart(df).mark_line(
+                    color="#e53935", point=True
+                ).encode(
+                    x=alt.X("date:T", title="Date"),
+                    y=alt.Y("high_risk:Q", title="High-Risk Count"),
+                    tooltip=["date:T", "high_risk:Q", "avg_confidence:Q"],
+                ).properties(height=250)
+                st.altair_chart(line, use_container_width=True)
+
+                st.subheader("Raw Data")
+                st.dataframe(df, use_container_width=True)
+            except ImportError:
+                # Fallback if altair not installed
+                st.subheader("Trend Data")
+                st.json(trend)
+
+
+# ── BATCH CSV ────────────────────────────────────────
+elif page == "📂 Batch CSV":
+    st.title("📂 Batch CSV Analysis")
+    st.markdown("Upload a CSV with a `text` column to score up to **500 rows** at once.")
+    st.divider()
+
+    st.info("**CSV format:** Must have a column named `text`. Other columns are ignored.")
+    uploaded = st.file_uploader("Choose a CSV file", type=["csv"])
+
+    if uploaded:
+        if st.button("🚀 Run Batch Analysis", type="primary"):
+            with st.spinner("Analysing all rows…"):
+                try:
+                    r = requests.post(
+                        f"{API_URL}/api/predict-batch",
+                        files={"file": (uploaded.name, uploaded.getvalue(), "text/csv")},
+                        headers={"Authorization": get_headers().get("Authorization", "")},
+                        timeout=120,
+                    )
+                    data = r.json()
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
+                    data = {}
+
+            if data.get("success"):
+                results = data.get("results", [])
+                total   = data.get("total_rows", 0)
+                high    = data.get("high_risk_rows", 0)
+
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Rows Analysed", total)
+                col2.metric("High Risk", high)
+                col3.metric("High-Risk Rate", f"{high/total:.1%}" if total else "—")
+
+                try:
+                    import pandas as pd
+                    df = pd.DataFrame(results)
+                    df["risk_colour"] = df["risk_level"].map(
+                        {"HIGH": "🔴", "LOW": "🟢"}).fillna("⚪")
+                    st.dataframe(df, use_container_width=True)
+
+                    csv_out = df.to_csv(index=False).encode()
+                    st.download_button("⬇️ Download Results CSV", csv_out,
+                                       file_name="batch_results.csv", mime="text/csv")
+                except ImportError:
+                    st.json(results)
+            else:
+                st.error(f"API error: {data.get('detail', r.status_code)}")
