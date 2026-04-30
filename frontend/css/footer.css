@@ -14,7 +14,7 @@
 footer {
   background: var(--footer-bg); /* #0D0D14 — dark blue-tinted black */
   color: var(--white);
-  padding: 80px 80px 40px;
+ padding: 40px 0 32px;
 }
 .footer-inner {
   max-width: 1200px;
@@ -180,4 +180,59 @@ footer {
   .footer-links { grid-template-columns: 1fr; }
   .footer-social { gap: 16px; }
   .analyze-section { padding: 60px 20px; }
+}
+/* ── REDESIGNED FOOTER ── */
+.footer-logo-big {
+  font-family: var(--condensed);
+  font-size: clamp(60px, 10vw, 120px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.footer-logo-big span { color: var(--red); }
+
+.footer-tagline {
+  font-family: var(--condensed);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 40px;
+}
+
+.footer-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin-bottom: 28px;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* Fix cursor color on footer */
+footer #cursor,
+footer ~ #cursor {
+  background: #000 !important;
+}
+.footer-top-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 40px;
+}
+
+/* Fix cursor on dark footer */
+footer {
+  cursor: none;
+}
+footer * {
+  cursor: none;
 }
