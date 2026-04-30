@@ -638,3 +638,43 @@
   .hs-ghost  { display: none; }
   .hs-hint   { display: none; }
 }
+
+/* ── RED BLOCKS STATS OVERLAY ── */
+.redblock-stats {
+  position: absolute;
+  bottom: 60px;
+  left: 35%;
+  transform: translateX(-50%, -50%);
+  display: flex;
+  flex-direction: row;
+  gap: 48px;
+  z-index: 20;
+  text-align: center;
+  top: 30%;
+  left: 25%;
+}
+.rb-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rb-num {
+  font-family: var(--condensed);
+  font-size: 42px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.rb-label {
+  font-family: var(--condensed);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+}
+@media (max-width: 768px) {
+  .redblock-stats { position: absolute; bottom: 24px; left: 24px; gap: 24px; }
+  .rb-num { font-size: 26px; }
+}
