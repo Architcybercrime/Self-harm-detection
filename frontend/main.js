@@ -380,24 +380,12 @@ function setBackendStatus(state) {
   } catch { setBackendStatus('offline'); }
 })();
 
-/* Demo auth — creates a shared demo account if needed */
+/* Demo auth — obtains a short-lived visitor token from the backend */
 async function ensureAuth() {
   if (authToken) return true;
   try {
-    const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 5000);
-    await fetch(`${API_BASE}/register`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'safesignal_demo', password: 'Demo@SafeSignal24' }),
-      signal: ctrl1.signal
-    });
-  } catch {}
-  try {
-    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 5000);
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'safesignal_demo', password: 'Demo@SafeSignal24' }),
-      signal: ctrl2.signal
-    });
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(`${API_BASE}/demo-token`, { signal: ctrl.signal });
     const d = await res.json();
     if (d.access_token) {
       authToken = d.access_token;

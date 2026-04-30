@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      JWT_SECRET_KEY: ci-test-secret-key-not-for-production
+      SUPABASE_URL: ""
+      SUPABASE_KEY: ""
+      ALLOWED_ORIGINS: "http://localhost:3000"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # Install a lightweight subset for CI (no GPU/audio/video deps)
+          pip install \
+            fastapi uvicorn[standard] python-jose[cryptography] bcrypt \
+            python-dotenv pydantic httpx requests \
+            pytest pytest-asyncio starlette \
+            slowapi python-socketio python-multipart \
+            nltk scikit-learn numpy scipy joblib \
+            supabase sendgrid twilio pyotp qrcode[pil] \
+            reportlab shap
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('vader_lexicon', quiet=True)"
+
+      - name: Run pytest
+        run: pytest tests/test_api.py -v --tb=short
