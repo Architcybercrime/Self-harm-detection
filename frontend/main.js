@@ -1128,3 +1128,18 @@ function bioReset() {
     t.querySelector('.dot').style.background = i === 0 ? 'var(--red)' : 'var(--muted)';
   });
 }
+
+/* ── PRECISION BARS — animate when section scrolls into view ── */
+const precisionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.pbar').forEach(bar => {
+        bar.style.width = bar.dataset.width + '%';
+      });
+      precisionObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+const precisionSection = document.querySelector('.precision-overlay');
+if (precisionSection) precisionObserver.observe(precisionSection);

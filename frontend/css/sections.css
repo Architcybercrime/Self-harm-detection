@@ -310,7 +310,10 @@
 /* Title bleeds off the left edge — this is intentional */
 .dark-chapter-title {
   position: relative;
-  z-index: 2;
+  z-index: 1;
+  opacity: 0.30; /* very subtle, blends into background */
+  top: 8%;
+  bottom: auto;
   font-family: var(--condensed);
   font-size: clamp(120px, 18vw, 220px);
   font-weight: 900;
@@ -800,4 +803,98 @@
   .fc-visual-number { font-size: 100px; }
   .fc-text { padding: 36px 24px; }
   .fc-title { font-size: 26px; }
+}
+
+/* ── PRECISION OVERLAY ── */
+.precision-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  z-index: 10;
+  padding: 60px;
+}
+
+/* Confusion matrix */
+.precision-matrix {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.precision-matrix-label {
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 16px;
+}
+.matrix-img {
+  width: 100%;
+  max-width: 560px;
+  border: 1px solid rgba(255,255,255,0.1);
+  opacity: 0.9;
+  transition: opacity 0.3s;
+}
+.matrix-img:hover { opacity: 1; }
+
+/* Accuracy bars */
+.precision-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 320px;
+}
+.precision-bars-label {
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 20px;
+}
+.pbar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 70px;
+  align-items: center;
+  gap: 16px;
+}
+.pbar-name {
+  font-family: var(--condensed);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+}
+.pbar-wrap {
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.pbar {
+  height: 100%;
+  width: 0%;
+  background: var(--red);
+  transition: width 1.2s cubic-bezier(0.16,1,0.3,1);
+}
+.pbar-val {
+  font-family: var(--condensed);
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  text-align: right;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .precision-overlay { flex-direction: column; gap: 32px; width: 90%; }
+  .precision-matrix { align-items: center; }
+  .matrix-img { max-width: 240px; }
 }
