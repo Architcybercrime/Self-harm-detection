@@ -22,17 +22,13 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 import re as _re
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import socketio
-from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict
-import joblib, sys, datetime, uuid, shutil, secrets, base64, io, csv
-import numpy as np
-from pathlib import Path
+import sys, datetime
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 from supabase import create_client
@@ -40,19 +36,9 @@ from supabase import create_client
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils.preprocess import full_preprocess, get_sentiment_scores
-from utils.monitor import log_prediction, get_monitoring_report
-from utils.facial_analysis import analyze_face_from_base64, capture_webcam_frame
-from utils.speech_analysis import analyze_audio_file, record_from_microphone
-from utils.fusion import fuse_risk_scores
-from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
-from utils.auth import register_user, login_user
-from utils.audit_log import (
-    log_prediction as audit_prediction,
-    log_api_key_event, log_unauthorized,
-    log_mfa_event, get_audit_logs,
-)
-from utils.alerts import dispatch_high_risk_alert
+
+# Import ml_engine early so models are loaded once at startup
+from ml_engine import prediction_log, run_prediction  # noqa: F401
 
 # ── CONSTANTS ────────────────────────────────────────
 JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
@@ -164,69 +150,6 @@ async def ping(sid, data):
         "timestamp": datetime.datetime.now().isoformat()
     }, to=sid)
 
-# ── LOAD MODELS ──────────────────────────────────────
-_BASE = os.path.dirname(os.path.abspath(__file__))
-
-model = None
-tfidf = None
-
-try:
-    model = joblib.load(os.path.join(_BASE, 'model', 'risk_model.pkl'))
-    tfidf = joblib.load(os.path.join(_BASE, 'model', 'tfidf_vectorizer.pkl'))
-except FileNotFoundError:
-    print('WARNING: Model files not found - using keyword-based fallback')
-
-prediction_log = []
-
-
-# ── KEYWORD-BASED FALLBACK ───────────────────────────
-def keyword_based_prediction(text, sentiment):
-    """Fallback risk scoring when trained model files are unavailable."""
-    text_lower = text.lower()
-
-    critical_keywords = [
-        'kill myself', 'kill me', 'end my life', 'want to die',
-        'suicide', 'commit suicide', 'end it all', 'not worth living',
-        'better off dead', 'take my life', 'ending my life',
-        'no reason to live', 'want to end', 'hang myself',
-        'overdose', 'slit my', 'cut myself', 'wanted to suicide',
-        'wanna suicide', 'kms', 'wanted suicide'
-    ]
-
-    high_risk_keywords = [
-        'hopeless', 'worthless', 'useless', 'burden',
-        'cant go on', "can't go on", 'give up', 'giving up',
-        'no point', 'pointless', 'meaningless', 'empty inside',
-        'trapped', 'suffering', 'no escape', 'cant take it',
-        "can't take it", 'wanna die', 'dying', 'death',
-        'helpless', 'depressed'
-    ]
-
-    medium_risk_keywords = [
-        'sad', 'crying', 'alone', 'lonely', 'tired', 'exhausted',
-        'cant sleep', "can't sleep", 'anxious', 'panic', 'scared',
-        'afraid', 'broken', 'numb', 'empty', 'lost', 'stressed'
-    ]
-
-    critical_count = sum(1 for kw in critical_keywords if kw in text_lower)
-    high_count = sum(1 for kw in high_risk_keywords if kw in text_lower)
-    medium_count = sum(1 for kw in medium_risk_keywords if kw in text_lower)
-
-    if critical_count >= 1 or high_count >= 2 or sentiment < -0.7:
-        risk_level = 'HIGH'
-        confidence = min(0.95, 0.80 + (critical_count * 0.05) + (high_count * 0.03))
-        alert = True
-    elif high_count >= 1 or medium_count >= 2 or sentiment < -0.3:
-        risk_level = 'MEDIUM'
-        confidence = min(0.85, 0.65 + (high_count * 0.05) + (medium_count * 0.02))
-        alert = False
-    else:
-        risk_level = 'LOW'
-        confidence = 0.75
-        alert = False
-
-    return risk_level, round(confidence, 4), alert
-
 # ── JWT + API KEY AUTH ────────────────────────────────
 security = HTTPBearer()
 
@@ -279,102 +202,6 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def run_prediction(text, explain: bool = False):
-    """Helper to run ML prediction on text. Set explain=True for SHAP top words."""
-    cleaned   = full_preprocess(text)
-    scores    = get_sentiment_scores(text)
-    sentiment = scores['compound']
-    neg_score = scores['neg']
-
-    if model is None or tfidf is None:
-        risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
-        message = ('High risk indicators detected. Please seek professional support immediately.'
-                   if alert else 'No immediate concern detected. Continue monitoring.')
-
-        return {
-            "risk_level":      risk_level,
-            "confidence":      confidence,
-            "alert_triggered": alert,
-            "sentiment_score": round(sentiment, 4),
-            "message":         message,
-            "modality":        "text",
-            "risk_indicators": {
-                "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
-                "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
-                "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
-            },
-            "recommendations": {
-                "immediate_action":  alert,
-                "support_resources": [
-                    "iCall: 9152987821",
-                    "Vandrevala Foundation: 1860-2662-345",
-                    "AASRA: 9820466627"
-                ] if alert else [],
-                "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
-            },
-            "analysis_timestamp": datetime.datetime.now().isoformat()
-        }
-
-    tfidf_vec  = tfidf.transform([cleaned]).toarray()
-    X          = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-    prediction = model.predict(X)[0]
-    probability= model.predict_proba(X)[0]
-    confidence = round(float(max(probability)), 4)
-
-    risk_level = 'HIGH' if prediction == 'suicide' else 'LOW'
-    alert      = risk_level == 'HIGH'
-    message    = ('High risk indicators detected. Please seek professional support immediately.'
-                  if alert else 'No immediate concern detected. Continue monitoring.')
-
-    # SHAP explanation — fast for linear models
-    top_words = []
-    try:
-        import shap
-        feature_names = tfidf.get_feature_names_out().tolist() + ["sentiment", "neg_score"]
-        explainer     = shap.LinearExplainer(model, X, feature_perturbation="interventional")
-        shap_vals     = explainer.shap_values(X)
-        # shap_vals shape: (n_classes, n_samples, n_features) or (n_samples, n_features)
-        if isinstance(shap_vals, list):
-            # index 1 = "suicide" class (positive label)
-            vals = shap_vals[1][0] if len(shap_vals) > 1 else shap_vals[0][0]
-        else:
-            vals = shap_vals[0]
-        top_idx   = np.argsort(np.abs(vals))[::-1][:8]
-        top_words = [
-            {"word": feature_names[i], "impact": round(float(vals[i]), 4)}
-            for i in top_idx if abs(vals[i]) > 1e-6
-        ]
-    except Exception:
-        pass
-
-    result = {
-        "risk_level":      risk_level,
-        "confidence":      confidence,
-        "alert_triggered": alert,
-        "sentiment_score": round(sentiment, 4),
-        "message":         message,
-        "modality":        "text",
-        "risk_indicators": {
-            "text_sentiment":   "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
-            "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
-            "severity":         "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
-        },
-        "recommendations": {
-            "immediate_action":  alert,
-            "support_resources": [
-                "iCall: 9152987821",
-                "Vandrevala Foundation: 1860-2662-345",
-                "AASRA: 9820466627"
-            ] if alert else [],
-            "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
-        },
-        "analysis_timestamp": datetime.datetime.now().isoformat()
-    }
-    if top_words:
-        result["explanation"] = {"top_words": top_words}
-    return result
-
-
 # ── HEALTH ───────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
 def health(request: Request):
@@ -401,7 +228,8 @@ def health(request: Request):
 
 
 # ── ROUTERS ──────────────────────────────────────────
-# Imported here so run_prediction / prediction_log are already defined above.
+# Routers are imported after app + sio are ready.
+# All shared state (model, prediction_log) lives in ml_engine.py.
 from routers import auth as auth_router
 from routers import predict as predict_router
 from routers import analysis as analysis_router
