@@ -16,12 +16,12 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✓ Supabase connected")
+        print("Supabase connected")
     except Exception as e:
-        print(f"⚠️  Supabase connection failed: {e}")
+        print(f"Supabase connection failed: {e}")
         supabase = None
 else:
-    print("⚠️  Supabase credentials not found - using mock mode")
+    print("Supabase credentials not found - using mock mode")
     supabase = None
 
 

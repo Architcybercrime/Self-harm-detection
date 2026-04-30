@@ -1,0 +1,69 @@
+services:
+  # ── FastAPI Backend ──────────────────────────────
+  - type: web
+    name: safesignal-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('stopwords')" && python download_models.py && python run_migrations.py
+    startCommand: uvicorn main:socket_app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://frontend-lime-three-65.vercel.app
+      - key: MFA_ISSUER
+        value: SafeSignal
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        value: alerts@safesignal.app
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        value: whatsapp:+14155238886
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  # ── Streamlit Dashboard ──────────────────────────
+  - type: web
+    name: safesignal-dashboard
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt && pip install streamlit altair && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('stopwords')"
+    startCommand: streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    rootDir: .
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        fromService:
+          name: safesignal-api
+          type: web
+          envVarKey: JWT_SECRET_KEY
+      - key: API_URL
+        fromService:
+          name: safesignal-api
+          type: web
+          property: hostURL
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    autoDeploy: true

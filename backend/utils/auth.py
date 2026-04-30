@@ -13,12 +13,21 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client
 from jose import jwt
+from utils.audit_log import log_login_success, log_login_failure, log_register
 
 load_dotenv()
 
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY  = os.getenv("SUPABASE_KEY", "")
-JWT_SECRET    = os.getenv('JWT_SECRET_KEY', 'selfharm-detection-secret-key-2026')
+
+# IMPORTANT: JWT_SECRET MUST be set in production environment
+# For development only: if not set, use a warning fallback (insecure!)
+JWT_SECRET = os.getenv('JWT_SECRET_KEY')
+if not JWT_SECRET:
+    import warnings
+    warnings.warn("JWT_SECRET_KEY not set in environment. Using insecure development default.", stacklevel=2)
+    JWT_SECRET = 'selfharm-detection-secret-key-2026'  # ONLY for development
+
 JWT_ALGORITHM = "HS256"
 
 # Gracefully handle missing credentials
@@ -29,6 +38,9 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase = None
 else:
     supabase = None
+
+# In-memory mock user store for test/dev when Supabase not configured
+_mock_users = {}
 
 
 def hash_password(password):
@@ -45,7 +57,12 @@ def verify_password(password, hashed):
 def register_user(username, password):
     """Register a new user in Supabase."""
     if supabase is None:
-        return {"success": True, "message": f"User {username} registered (mock mode)"}
+        # Use in-memory store for mock mode (supports duplicate checks)
+        if username in _mock_users:
+            return {"success": False, "error": "Username already exists"}
+        hashed = hash_password(password)
+        _mock_users[username] = {"password": hashed, "role": "user"}
+        return {"success": True, "message": f"User {username} registered successfully (mock)"}
     
     try:
         existing = supabase.table("Users")\
@@ -54,6 +71,7 @@ def register_user(username, password):
             .execute()
 
         if existing.data:
+            log_register(username, success=False, reason="username already exists")
             return {"success": False, "error": "Username already exists"}
 
         hashed = hash_password(password)
@@ -63,16 +81,23 @@ def register_user(username, password):
             "role":     "user"
         }).execute()
 
+        log_register(username, success=True)
         return {"success": True, "message": f"User {username} registered successfully"}
 
     except Exception as e:
+        log_register(username, success=False, reason=str(e))
         return {"success": False, "error": str(e)}
 
 
 def login_user(username, password):
     """Login user and return JWT token. Works with Flask and FastAPI."""
     if supabase is None:
-        # Mock login for testing
+        # Mock login checks in-memory store
+        user = _mock_users.get(username)
+        if not user:
+            return {"success": False, "error": "User not found"}
+        if not verify_password(password, user['password']):
+            return {"success": False, "error": "Invalid password"}
         token = jwt.encode({
             "sub":   username,
             "fresh": False,
@@ -80,12 +105,12 @@ def login_user(username, password):
             "exp":   datetime.utcnow() + timedelta(hours=24),
             "type":  "access"
         }, JWT_SECRET, algorithm=JWT_ALGORITHM)
-        
+
         return {
             "success":      True,
             "access_token": token,
             "username":     username,
-            "role":         "user",
+            "role":         user.get('role', 'user'),
             "expires_in":   "24 hours"
         }
     
@@ -96,11 +121,13 @@ def login_user(username, password):
             .execute()
 
         if not result.data:
+            log_login_failure(username, reason="user not found")
             return {"success": False, "error": "User not found"}
 
         user = result.data[0]
 
         if not verify_password(password, user['password']):
+            log_login_failure(username, reason="wrong password")
             return {"success": False, "error": "Invalid password"}
 
         token = jwt.encode({
@@ -111,6 +138,7 @@ def login_user(username, password):
             "type":  "access"
         }, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+        log_login_success(username)
         return {
             "success":      True,
             "access_token": token,
@@ -120,6 +148,7 @@ def login_user(username, password):
         }
 
     except Exception as e:
+        log_login_failure(username, reason=str(e))
         return {"success": False, "error": str(e)}
 
 
