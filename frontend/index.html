@@ -115,11 +115,82 @@
   </section>
 
   <!-- SECTION 5: PHOTO GRID (normal vertical) -->
-  <section class="section-white photo-grid-section">
-    <div class="photo-grid">
-      <div class="photo-card photo-card-1 reveal"><div class="photo-img photo-img-1"></div></div>
-      <div class="photo-card photo-card-2 reveal" style="transition-delay:0.15s"><div class="photo-img photo-img-2"></div></div>
+  <!-- SECTION 5: FEATURE CARDS -->
+  <!-- SECTION 5: FEATURE CARDS — alternating magazine layout -->
+  <section class="section-white feature-cards-section">
+
+    <!-- Card 1: visual left, text right -->
+    <div class="fc-row reveal">
+      <div class="fc-visual fc-visual-1">
+        <div class="fc-visual-number">01</div>
+        <div class="fc-visual-tag">MULTIMODAL</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">MULTIMODAL DETECTION</div>
+        <div class="fc-title">Three signals.<br>One verdict.</div>
+        <div class="fc-body">SafeSignal combines text, facial expression, and voice tone into a single unified risk score — no single modality can fool the system.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">NLP</span>
+          <span class="fc-pill">DeepFace</span>
+          <span class="fc-pill">Librosa</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Card 2: text left, visual right -->
+    <div class="fc-row fc-row-reverse reveal">
+      <div class="fc-visual fc-visual-2">
+        <div class="fc-visual-number">02</div>
+        <div class="fc-visual-tag">REAL-TIME</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">REAL-TIME ANALYSIS</div>
+        <div class="fc-title">Instant results.<br>Live alerts.</div>
+        <div class="fc-body">Risk scores are generated in real time via a REST API. When HIGH risk is detected, WebSocket alerts fire instantly — no polling, no delay.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">Flask API</span>
+          <span class="fc-pill">Socket.IO</span>
+          <span class="fc-pill">JWT Auth</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: visual left, text right -->
+    <div class="fc-row reveal">
+      <div class="fc-visual fc-visual-3">
+        <div class="fc-visual-number">03</div>
+        <div class="fc-visual-tag">ML MODEL</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">ML MODEL</div>
+        <div class="fc-title">92.2% accurate.<br>Clinically trained.</div>
+        <div class="fc-body">Logistic Regression model trained on 232,074 real-world samples from the Kaggle Suicide Detection dataset, using TF-IDF and VADER sentiment features.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">Logistic Regression</span>
+          <span class="fc-pill">TF-IDF</span>
+          <span class="fc-pill">VADER</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: text left, visual right -->
+    <div class="fc-row fc-row-reverse reveal">
+      <div class="fc-visual fc-visual-4">
+        <div class="fc-visual-number">04</div>
+        <div class="fc-visual-tag">SECURE</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">SECURE & PRIVATE</div>
+        <div class="fc-title">Protected by design.<br>Not an afterthought.</div>
+        <div class="fc-body">Every endpoint is JWT-protected. Passwords are bcrypt hashed. Rate limiting, CORS restrictions, and Supabase Row Level Security keep all data safe.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">JWT</span>
+          <span class="fc-pill">bcrypt</span>
+          <span class="fc-pill">Supabase RLS</span>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- HSCROLL 3: Photo Grid visible first → PRECISION slides in from RIGHT
