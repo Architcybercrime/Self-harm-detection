@@ -1040,3 +1040,86 @@
   color: var(--muted);
   align-self: start;
 }
+/* ── HOW TO USE — section 7 ── */
+.howto-wrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 85%;
+  max-width: 1000px;
+  text-align: center;
+}
+.howto-label {
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 48px;
+}
+.howto-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.howto-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 0 24px;
+}
+.howto-num {
+  font-family: var(--condensed);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--red);
+  margin-bottom: 16px;
+}
+.howto-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+  width: 72px;
+  height: 72px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.howto-title {
+  font-family: var(--condensed);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.howto-desc {
+  font-family: var(--condensed);
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.03em;
+  max-width: 220px;
+}
+.howto-arrow {
+  position: absolute;
+  right: -16px;
+  top: 36px;
+  font-size: 24px;
+  color: var(--red);
+  opacity: 0.6;
+}
+@media (max-width: 768px) {
+  .howto-steps { flex-direction: column; gap: 32px; align-items: center; }
+  .howto-arrow { display: none; }
+  .howto-step { padding: 0; }
+}
