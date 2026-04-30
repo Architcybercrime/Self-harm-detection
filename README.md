@@ -1,95 +1,127 @@
-# 🧠 Self-Harm Detection System
-### AI-Based Detection Using Behavioral & Physiological Indicators
+# SafeSignal — Self-Harm Detection System
 
-> **Project 34 | 2nd Year AIML Mini Project**  
-> **Team:** Avani Upadhyay | Archit Agrawal
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)
+![Pytest](https://img.shields.io/badge/Tests-35%2B%20cases-brightgreen?logo=pytest)
+![Deploy](https://img.shields.io/badge/Backend-Render-blueviolet?logo=render)
+![Frontend](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
----
+> **Project 34 — 2nd Year AIML Mini Project**
+> Team: Avani Upadhyay | Archit Agrawal
 
-## 📌 Problem Statement
-Self-harm is a critical mental health concern that often remains undetected due to stigma, lack of visible symptoms, and limited access to timely support. This system uses **multimodal AI** to analyze behavioral and physiological signals to identify at-risk individuals and trigger timely alerts.
-
----
-
-## 🎯 Key Objectives
-- Detect early indicators of self-harm risk using AI/ML
-- Enable timely intervention by mental health professionals
-- Preserve user privacy and confidentiality
-- Support caregivers and mental health support systems
+AI-based multimodal system for self-harm risk detection using text, facial expressions, and speech analysis. Accuracy: **92.2%**.
 
 ---
 
-## ⚙️ System Architecture & Workflow
+## Architecture
+
 ```
-Data Collection → Preprocessing → Feature Extraction → 
-Model Training → Evaluation → FastAPI → Alert Generation → PDF Report
+Browser / Vercel Frontend
+        |
+        | HTTPS (JWT Bearer token)
+        v
+Render Backend  ──────────────  Supabase PostgreSQL
+(FastAPI 2.0)                   (Users, Predictions,
+        |                        ApiKeys, UserMFA,
+        |                        UserProfiles, AuditLog)
+        |
+   ┌────┴──────────────────────────────────┐
+   │              ML Pipeline              │
+   │  TF-IDF + VADER + Logistic Regression │
+   │  DeepFace (facial emotion)            │
+   │  Librosa + SpeechRecognition (audio)  │
+   │  Multimodal Fusion (dynamic weights)  │
+   └───────────────────────────────────────┘
+        |
+   Real-time WebSocket (Socket.IO)
+   PDF Report Generator (ReportLab)
 ```
+
 ```
 Self-harm-detection/
-│
+├── .github/
+│   └── workflows/
+│       └── ci.yml              <- GitHub Actions: pytest on push to main
 ├── backend/
-│   ├── app.py                  ← Flask REST API (port 5000)
-│   ├── main.py                 ← FastAPI v2.0 (port 8000) ← PRIMARY
+│   ├── main.py                 <- FastAPI v2.0 (PRIMARY, port 8000)
+│   ├── app.py                  <- Flask backup API (port 5000)
+│   ├── .env.example            <- Template for environment variables
 │   ├── model/
-│   │   └── train_model.py      ← ML model training
+│   │   └── train_model.py      <- ML model training script
 │   ├── utils/
-│   │   ├── preprocess.py       ← Text preprocessing
-│   │   ├── facial_analysis.py  ← DeepFace real-time webcam
-│   │   ├── speech_analysis.py  ← Librosa audio analysis
-│   │   ├── fusion.py           ← Multimodal risk fusion
-│   │   ├── monitor.py          ← Trend-based drift detection
-│   │   ├── database.py         ← Supabase integration
-│   │   ├── auth.py             ← JWT authentication
-│   │   ├── validators.py       ← Input validation
-│   │   └── report_generator.py ← Professional PDF reports
-│   ├── tests/
-│   │   └── test_api.py         ← 28 pytest test cases
-│   └── data/
-│       └── README.md           ← Dataset instructions
-│
-├── streamlit_app.py            ← Interactive dashboard
+│   │   ├── auth.py             <- JWT + bcrypt authentication
+│   │   ├── preprocess.py       <- Text preprocessing pipeline
+│   │   ├── facial_analysis.py  <- DeepFace webcam/image analysis
+│   │   ├── speech_analysis.py  <- Librosa + SpeechRecognition
+│   │   ├── fusion.py           <- Multimodal risk score fusion
+│   │   ├── monitor.py          <- Drift detection & monitoring
+│   │   ├── database.py         <- Supabase helpers
+│   │   ├── alerts.py           <- Email / SMS / WhatsApp alerts
+│   │   ├── audit_log.py        <- Structured security audit log
+│   │   ├── validators.py       <- Input validation helpers
+│   │   └── report_generator.py <- Professional PDF reports
+│   └── tests/
+│       └── test_api.py         <- 35+ pytest test cases
 ├── frontend/
-│   ├── index.html              ← Main UI
-│   ├── style.css               ← Styling
-│   └── scripts.js              ← Frontend logic
-│
-├── docs/
-│   └── confusion_matrix.png    ← Model evaluation chart
-│
-├── requirements.txt
+│   ├── index.html              <- Main UI (deployed to Vercel)
+│   ├── style.css               <- Styling
+│   └── main.js                 <- Frontend logic
+├── streamlit_app.py            <- Interactive Streamlit dashboard
+├── docker-compose.yml
+├── Dockerfile
 └── README.md
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## API Reference
 
-| Layer | Technology |
-|---|---|
-| Primary API | Python, **FastAPI** v2.0 |
-| Backup API | Python, Flask |
-| Machine Learning | Scikit-learn, NLTK |
-| Text Analysis | TF-IDF, VADER Sentiment |
-| Facial Analysis | DeepFace, OpenCV (Real-time webcam) |
-| Speech Analysis | Librosa, SpeechRecognition, PyAudio |
-| Data Processing | Pandas, NumPy |
-| Database | Supabase PostgreSQL |
-| Authentication | JWT + Bcrypt |
-| Security | Rate Limiting, CORS, Security Headers |
-| Real-time | WebSocket (Socket.IO) |
-| PDF Reports | ReportLab |
-| Dashboard | Streamlit |
-| Testing | Pytest (28 test cases) |
-| Frontend | HTML5, CSS3, JavaScript |
-| Visualization | Matplotlib, Seaborn |
-| Model Persistence | Joblib |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/health` | Public | Health check with CORS headers |
+| GET | `/api/cors-check` | Public | CORS verification endpoint |
+| GET | `/api/demo-token` | Public | Issue 2-hour visitor JWT (no credentials) |
+| POST | `/api/register` | Public | Register new user |
+| POST | `/api/login` | Public | Login and get 24-hour JWT |
+| POST | `/api/auth/mfa/login` | Public | MFA second-step login |
+| GET | `/api/profile` | JWT | Get current user's profile |
+| POST | `/api/predict` | JWT | Predict self-harm risk from text (92.2% accuracy) |
+| POST | `/api/generate-report` | JWT | Download professional PDF risk report |
+| POST | `/api/analyze-face` | JWT | Facial emotion detection (webcam or base64) |
+| POST | `/api/analyze-speech` | JWT | Speech analysis (microphone or audio file) |
+| POST | `/api/analyze-speech-upload` | JWT | Browser-recorded audio upload |
+| POST | `/api/predict-multimodal` | JWT | Combined text + face + speech prediction |
+| POST | `/api/predict-batch` | JWT | Batch CSV analysis (max 500 rows) |
+| POST | `/api/analyze-video` | JWT | Video file analysis |
+| GET | `/api/stats` | JWT | Session prediction statistics |
+| GET | `/api/monitor` | JWT | Monitoring and drift detection report |
+| GET | `/api/history` | JWT | Recent prediction history from DB |
+| GET | `/api/db-stats` | JWT | Database statistics |
+| GET | `/api/user/profile` | JWT | Alert preferences and user profile |
+| PUT | `/api/user/profile` | JWT | Update alert preferences |
+| GET | `/api/user/risk-trend` | JWT | Longitudinal risk trend (last N days) |
+| POST | `/api/keys/generate` | JWT | Generate personal API key |
+| GET | `/api/keys/my-key` | JWT | View your active API key |
+| DELETE | `/api/keys/revoke` | JWT | Revoke your API key |
+| POST | `/api/auth/mfa/setup` | JWT | Set up TOTP MFA (returns QR code) |
+| POST | `/api/auth/mfa/verify-setup` | JWT | Confirm and activate MFA |
+| POST | `/api/auth/mfa/disable` | JWT | Disable MFA |
+| GET | `/api/auth/mfa/status` | JWT | Check MFA status |
+| GET | `/api/admin/users` | Admin JWT | List all users |
+| GET | `/api/admin/analytics` | Admin JWT | Aggregated risk analytics |
+| GET | `/api/admin/audit-logs` | Admin JWT | Security audit log |
+
+Interactive docs:
+- Swagger UI: `https://safesignal-api.onrender.com/docs`
+- ReDoc: `https://safesignal-api.onrender.com/redoc`
 
 ---
 
-## 🤖 ML Model Performance
+## ML Model Performance
 
 | Metric | Score |
-|---|---|
+|--------|-------|
 | Accuracy | **92.2%** |
 | Precision | 92% |
 | Recall | 92% |
@@ -98,71 +130,137 @@ Self-harm-detection/
 | Training Samples | 50,000 |
 | Dataset | Kaggle Suicide Detection (232,074 posts) |
 
-### Confusion Matrix
-![Confusion Matrix](docs/confusion_matrix.png)
+---
+
+## Security Features
+
+- JWT authentication with role claim (user / admin / demo) — 24-hour expiry
+- Demo visitor tokens — 2-hour short-lived JWT, no credentials required
+- Bcrypt password hashing with per-user salt
+- Rate limiting via `slowapi` on all endpoints
+- Security headers middleware: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`
+- Explicit CORS header enforcement on health and cors-check endpoints
+- Output sanitization — HTML tags stripped from user text before inclusion in API responses
+- Admin role enforced in JWT payload and verified against DB (backward-compatible)
+- SQL injection prevention (Supabase ORM — no raw SQL)
+- Input validation with Pydantic models (types, min/max length, regex)
+- CSRF protection (stateless JWT — no cookies)
+- Multi-factor authentication (TOTP/HOTP via pyotp)
+- Structured security audit log for all auth events
+- Environment variables for all secrets (no hardcoded credentials)
+- Row Level Security on Supabase tables
 
 ---
 
-## 📡 API Endpoints (FastAPI v2.0)
+## Test Coverage
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/health` | Public | Check API status |
-| POST | `/api/register` | Public | Register new user |
-| POST | `/api/login` | Public | Login and get JWT token |
-| GET | `/api/profile` | JWT | Get user profile |
-| POST | `/api/predict` | JWT | Predict risk from text |
-| POST | `/api/generate-report` | JWT | **Download professional PDF report** |
-| POST | `/api/analyze-face` | JWT | Real-time webcam emotion analysis |
-| POST | `/api/analyze-speech` | JWT | Live microphone speech analysis |
-| POST | `/api/predict-multimodal` | JWT | Combined text+face+speech prediction |
-| GET | `/api/stats` | JWT | Session statistics |
-| GET | `/api/monitor` | JWT | Trend-based drift detection |
-| GET | `/api/history` | JWT | Prediction history from DB |
-| GET | `/api/db-stats` | JWT | Database statistics |
-
-### Swagger UI
+```bash
+cd backend
+pytest tests/test_api.py -v
 ```
-FastAPI Docs : http://127.0.0.1:8000/docs
-FastAPI ReDoc: http://127.0.0.1:8000/redoc
-Flask Docs   : http://127.0.0.1:5000/apidocs
+
+35+ test cases covering:
+- Health endpoint response body and CORS headers
+- CORS check endpoint
+- Register (success, duplicate, short username, short password, invalid characters)
+- Login (nonexistent user, missing fields)
+- Demo token (200 response, body fields, valid JWT, accepted by predict)
+- Predict (requires auth, empty/too-short/too-long text, valid text, missing body)
+- Profile endpoint (requires auth, returns username)
+- Stats, History, Monitor endpoints
+- Admin/users (non-admin rejected, admin accepted)
+- Input validation edge cases
+- `sanitize_output` helper (strips HTML, leaves plain text unchanged)
+- Text preprocessing pipeline
+- Multimodal fusion module (text-only, no input, invalid weights)
+
+---
+
+## Setup — Local
+
+### Prerequisites
+- Python 3.11+
+- A Supabase project (free tier works)
+
+### Steps
+
+```bash
+# 1. Clone
+git clone https://github.com/Architcybercrime/Self-harm-detection.git
+cd Self-harm-detection
+
+# 2. Install backend dependencies
+cd backend
+pip install -r requirements.txt
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env and fill in JWT_SECRET_KEY, SUPABASE_URL, SUPABASE_KEY
+
+# 4. Download NLTK data
+python -c "import nltk; nltk.download('vader_lexicon')"
+
+# 5. (Optional) Download dataset and train the model
+#    Dataset: https://www.kaggle.com/datasets/nikhileswarkomati/suicide-watch
+#    Place Suicide_Detection.csv in backend/data/
+python model/train_model.py
+
+# 6. Start FastAPI
+python main.py
+# Swagger UI: http://127.0.0.1:8000/docs
+
+# 7. (Optional) Start Streamlit dashboard in another terminal
+cd ..
+streamlit run streamlit_app.py
 ```
 
 ---
 
-## 📄 Professional PDF Report
+## Setup — Docker
 
-The system generates clinical-style psychological assessment reports including:
-- **Overall Risk Level** with confidence score
-- **Behavioral Tendencies** identified through AI analysis
-- **Possible Underlying Conditions** with likelihood assessment
-- **Professional Recommendations** (CBT, DBT, crisis support)
-- **Emergency Support Resources** (iCall, Vandrevala, AASRA)
-```json
-POST /api/generate-report
-{
-  "text": "I feel completely hopeless and want to disappear"
-}
+```bash
+# Build and start both API and any supporting services
+docker-compose up --build
+
+# API available at http://localhost:8000
+# Swagger UI at http://localhost:8000/docs
 ```
-Returns: Downloadable PDF file
 
 ---
 
-## 🎯 Sample API Usage
+## Setup — Deployed
 
-### Text Prediction
-```json
-POST /api/predict
-{
-  "text": "I feel completely hopeless and nobody cares"
-}
+| Service | URL |
+|---------|-----|
+| Frontend | Vercel — deploys automatically from `frontend/` folder |
+| Backend | `https://safesignal-api.onrender.com` |
+| Swagger | `https://safesignal-api.onrender.com/docs` |
+
+The frontend uses `/api/demo-token` to obtain a short-lived visitor JWT — no account required for demo use.
+
+---
+
+## Sample API Usage
+
+### Get a demo token (no login needed)
+```bash
+curl https://safesignal-api.onrender.com/api/demo-token
 ```
-**Response:**
+
+### Text prediction
+```bash
+curl -X POST https://safesignal-api.onrender.com/api/predict \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "I feel completely hopeless and nobody cares"}'
+```
+
+Response:
 ```json
 {
-  "alert_triggered": true,
-  "confidence": 0.894,
   "risk_level": "HIGH",
+  "confidence": 0.894,
+  "alert_triggered": true,
   "sentiment_score": -0.5574,
   "risk_indicators": {
     "text_sentiment": "negative",
@@ -179,149 +277,28 @@ POST /api/predict
 }
 ```
 
-### Multimodal with Custom Weights
-```json
-POST /api/predict-multimodal
-{
-  "text": "I feel hopeless",
-  "use_webcam": true,
-  "use_microphone": false,
-  "weights": {"text": 0.6, "facial": 0.4, "speech": 0.0}
-}
-```
+---
+
+## Screenshots
+
+_Screenshots placeholder — add frontend and dashboard images here._
 
 ---
 
-## 🔐 Security Features
+## Ethical Considerations
 
-- ✅ JWT Authentication with 24hr token expiry
-- ✅ Bcrypt password hashing (industry standard)
-- ✅ Rate limiting on all endpoints
-- ✅ Security headers (XSS, Clickjacking protection)
-- ✅ CORS configuration (restricted origins)
-- ✅ Input validation with Pydantic models
-- ✅ SQL injection prevention (Supabase ORM)
-- ✅ CSRF protection (JWT stateless)
-- ✅ Environment variables for all secrets
-- ✅ Row Level Security on Supabase tables
+- This system is a **support tool only** — not a replacement for professional clinical diagnosis.
+- All predictions are stored securely with Supabase Row Level Security.
+- Alert system involves human-in-the-loop decision making.
+- Passwords hashed using bcrypt; no plaintext credentials stored or transmitted.
+- PDF reports include a mandatory clinical disclaimer.
 
 ---
 
-## 🧪 Testing
-```bash
-cd backend
-python -m pytest tests/test_api.py -v
-```
-
-**28 test cases covering:**
-- Health endpoint + WebSocket status
-- Prediction (high risk, low risk, validation, unauthorized)
-- Authentication (register, login, duplicate, missing fields)
-- Database endpoints (stats, history, structure)
-- Preprocessing pipeline
-- Multimodal fusion (custom weights, invalid weights)
-- Speech analysis module
-
----
-
-## 🖥️ Streamlit Dashboard
-
-Interactive dashboard for testing all features:
-```bash
-# Terminal 1 - Start FastAPI
-cd backend
-python main.py
-
-# Terminal 2 - Start Streamlit
-streamlit run streamlit_app.py
-```
-
-**Dashboard Pages:**
-- 🏠 Dashboard — stats + quick analysis + PDF download
-- 📝 Text Analysis — full analysis + PDF report
-- 📷 Facial Analysis — webcam + image upload
-- 🎤 Speech Analysis — microphone recording
-- 🔀 Multimodal — combined analysis
-- 📊 Monitoring — trend alerts, drift detection
-- 📈 History — all predictions from database
-
----
-
-## 🚀 Setup & Installation
-
-### Step 1: Clone the Repository
-```bash
-git clone https://github.com/Architcybercrime/Self-harm-detection.git
-cd Self-harm-detection
-```
-
-### Step 2: Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Step 3: Setup Environment Variables
-```bash
-cp backend/.env.example backend/.env
-# Fill in your Supabase and JWT credentials
-```
-
-### Step 4: Download Dataset
-Download from Kaggle and place in `backend/data/`:
-- Link: https://www.kaggle.com/datasets/nikhileswarkomati/suicide-watch
-- Filename: `Suicide_Detection.csv`
-
-### Step 5: Train the Model
-```bash
-cd backend
-python model/train_model.py
-```
-
-### Step 6: Run FastAPI (Primary)
-```bash
-cd backend
-python main.py
-# Swagger UI: http://127.0.0.1:8000/docs
-```
-
-### Step 7: Run Streamlit Dashboard
-```bash
-streamlit run streamlit_app.py
-# Dashboard: http://localhost:8501
-```
-
-### Step 8: Run Flask (Backup)
-```bash
-cd backend
-python app.py
-# Swagger UI: http://127.0.0.1:5000/apidocs
-```
-
----
-
-## 🗺️ Future Enhancements
-- [ ] Cloud deployment on Render.com
-- [ ] Docker containerization
-- [ ] Arduino heart rate sensor integration
-- [ ] Mobile PWA application
-- [ ] Google OAuth authentication
-- [ ] Video upload analysis
-
----
-
-## ⚠️ Ethical Considerations
-- This system is a **support tool only** — not a replacement for professional diagnosis
-- All predictions stored securely in cloud database with RLS
-- Alert system involves human-in-the-loop decision making
-- All passwords hashed using bcrypt
-- PDF reports include mandatory clinical disclaimer
-
----
-
-## 👥 Team
+## Team
 
 | Name | Role |
-|---|---|
+|------|------|
 | Avani Upadhyay | Frontend Development, UI/UX |
 | Archit Agrawal | Backend API, ML Model, FastAPI, Database, Security, PDF Reports |
 

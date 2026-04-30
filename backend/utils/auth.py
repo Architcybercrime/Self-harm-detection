@@ -98,8 +98,10 @@ def login_user(username, password):
             return {"success": False, "error": "User not found"}
         if not verify_password(password, user['password']):
             return {"success": False, "error": "Invalid password"}
+        user_role = user.get('role', 'user')
         token = jwt.encode({
             "sub":   username,
+            "role":  user_role,
             "fresh": False,
             "iat":   datetime.utcnow(),
             "exp":   datetime.utcnow() + timedelta(hours=24),
@@ -110,10 +112,10 @@ def login_user(username, password):
             "success":      True,
             "access_token": token,
             "username":     username,
-            "role":         user.get('role', 'user'),
+            "role":         user_role,
             "expires_in":   "24 hours"
         }
-    
+
     try:
         result = supabase.table("Users")\
             .select("*")\
@@ -130,8 +132,10 @@ def login_user(username, password):
             log_login_failure(username, reason="wrong password")
             return {"success": False, "error": "Invalid password"}
 
+        user_role = user.get('role', 'user')
         token = jwt.encode({
             "sub":   username,
+            "role":  user_role,
             "fresh": False,
             "iat":   datetime.utcnow(),
             "exp":   datetime.utcnow() + timedelta(hours=24),
@@ -143,7 +147,7 @@ def login_user(username, password):
             "success":      True,
             "access_token": token,
             "username":     username,
-            "role":         user['role'],
+            "role":         user_role,
             "expires_in":   "24 hours"
         }
 

@@ -20,10 +20,13 @@ warnings.filterwarnings('ignore')
 import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
+import re as _re
+
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse, FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import socketio
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict
@@ -180,6 +183,30 @@ app.add_middleware(
     allow_methods     = ["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers     = ["Content-Type", "Authorization"],
 )
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to every response."""
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"]    = "nosniff"
+        response.headers["X-Frame-Options"]           = "DENY"
+        response.headers["X-XSS-Protection"]          = "1; mode=block"
+        response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"]        = "geolocation=(), microphone=(), camera=()"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+def sanitize_output(text: str) -> str:
+    """Strip HTML tags from user-provided text to prevent XSS in API responses."""
+    if not isinstance(text, str):
+        return text
+    return _re.sub(r'<[^>]+>', '', text)
+
 
 # ── SOCKETIO ─────────────────────────────────────────
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -419,19 +446,27 @@ def run_prediction(text, explain: bool = False):
 
 # ── HEALTH ───────────────────────────────────────────
 @app.get("/api/health", tags=["Health"])
-def health():
+def health(request: Request):
     """Check API health status"""
-    return {
-        "status":    "running",
-        "service":   "Self Harm Detection API",
-        "version":   "2.0.0",
-        "framework": "FastAPI",
-        "accuracy":  "92.2%",
-        "database":  "Supabase PostgreSQL",
-        "auth":      "JWT + API Keys enabled",
-        "websocket": "enabled",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    origin = request.headers.get("origin", "*")
+    return JSONResponse(
+        content={
+            "status":    "running",
+            "service":   "Self Harm Detection API",
+            "version":   "2.0.0",
+            "framework": "FastAPI",
+            "accuracy":  "92.2%",
+            "database":  "Supabase PostgreSQL",
+            "auth":      "JWT + API Keys enabled",
+            "websocket": "enabled",
+            "timestamp": datetime.datetime.now().isoformat(),
+        },
+        headers={
+            "Access-Control-Allow-Origin":  origin if origin in ALLOWED_ORIGINS else "*",
+            "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+    )
 
 
 # ── AUTH ─────────────────────────────────────────────
@@ -464,6 +499,66 @@ def login(data: LoginInput):
     return result
 
 
+# ── DEMO TOKEN ───────────────────────────────────────
+@app.get("/api/demo-token", tags=["Authentication"])
+def demo_token(request: Request):
+    """
+    Issue a short-lived JWT for anonymous demo visitors.
+    No credentials required. Token valid for 2 hours.
+    Rate-limited: one token per IP per request cycle.
+    """
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+
+    token = jwt.encode(
+        {
+            "sub":  "demo_visitor",
+            "role": "demo",
+            "iat":  datetime.datetime.utcnow(),
+            "exp":  datetime.datetime.utcnow() + datetime.timedelta(hours=2),
+            "type": "demo",
+            "jti":  secrets.token_hex(8),
+        },
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+    )
+    return {
+        "success":      True,
+        "access_token": token,
+        "username":     "demo_visitor",
+        "role":         "demo",
+        "expires_in":   "2 hours",
+        "message":      "Demo token issued. Valid for 2 hours — no account needed.",
+    }
+
+
+# ── CORS CHECK ───────────────────────────────────────
+@app.get("/api/cors-check", tags=["Health"])
+def cors_check(request: Request):
+    """
+    Explicit CORS verification endpoint.
+    Returns the origin header and confirms CORS is active.
+    """
+    origin = request.headers.get("origin", "no-origin-header")
+    return JSONResponse(
+        content={
+            "cors":    "enabled",
+            "origin":  origin,
+            "allowed": ALLOWED_ORIGINS,
+            "headers": {
+                "Access-Control-Allow-Origin":      origin if origin in ALLOWED_ORIGINS else "*",
+                "Access-Control-Allow-Methods":     "GET, POST, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers":     "Content-Type, Authorization",
+            },
+        },
+        headers={
+            "Access-Control-Allow-Origin":  origin if origin in ALLOWED_ORIGINS else "*",
+            "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+    )
+
+
 # ── PREDICT ──────────────────────────────────────────
 @app.post("/api/predict", tags=["Prediction"])
 async def predict(data: TextInput, request: Request,
@@ -484,6 +579,9 @@ async def predict(data: TextInput, request: Request,
                     result['sentiment_score'], "text", result['alert_triggered'])
     audit_prediction(current_user, result['risk_level'], "text",
                      result['confidence'], ip=ip)
+
+    # Sanitize user-provided text echoed in the response (XSS prevention)
+    result["text"] = sanitize_output(data.text)
 
     if result['alert_triggered']:
         await sio.emit('high_risk_alert', {
@@ -974,21 +1072,43 @@ def mfa_login(data: MFALoginInput, request: Request):
 
 
 # ── ADMIN ────────────────────────────────────────────
-def require_admin(current_user: str = Depends(verify_token)):
-    """Restrict endpoint to users with role='admin' in the DB."""
-    supabase = get_supabase()
-    try:
-        result = supabase.table("Users")\
-            .select("role")\
-            .eq("username", current_user)\
-            .execute()
-        if not result.data or result.data[0].get("role") != "admin":
+def require_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    Restrict endpoint to users with role='admin'.
+    Checks JWT payload first (fast path); falls back to DB lookup for
+    old tokens that pre-date the role claim (backward-compatible).
+    """
+    token = credentials.credentials
+
+    # JWT path
+    if not token.startswith('shd_'):
+        try:
+            payload  = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            username = payload.get("sub")
+            if not username:
+                raise HTTPException(status_code=401, detail="Invalid token")
+            # Fast path: role embedded in JWT
+            if payload.get("role") == "admin":
+                return username
+            # Slow path: old token without role claim — verify in DB
+            supabase = get_supabase()
+            try:
+                result = supabase.table("Users")\
+                    .select("role")\
+                    .eq("username", username)\
+                    .execute()
+                if result.data and result.data[0].get("role") == "admin":
+                    return username
+            except Exception:
+                pass
             raise HTTPException(status_code=403, detail="Admin access required")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=403, detail="Admin access check failed")
-    return current_user
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # API-key path: no admin via API key
+    raise HTTPException(status_code=403, detail="Admin access requires JWT token")
 
 
 @app.get("/api/admin/audit-logs", tags=["Admin"])
@@ -1000,6 +1120,28 @@ def admin_audit_logs(
 ):
     """[Admin] Fetch structured security audit logs."""
     return get_audit_logs(limit=limit, event_type=event_type, username=username)
+
+
+@app.get("/api/admin/users", tags=["Admin"])
+def admin_users(
+    limit:      int = 100,
+    admin_user: str = Depends(require_admin),
+):
+    """[Admin] List all registered users (username, role, created_at). Requires admin role."""
+    supabase = get_supabase()
+    try:
+        result = supabase.table("Users")\
+            .select("username, role, created_at")\
+            .limit(limit)\
+            .execute()
+        users = result.data or []
+        return {
+            "success": True,
+            "count":   len(users),
+            "users":   users,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/admin/analytics", tags=["Admin"])
