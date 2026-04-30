@@ -14,7 +14,7 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://frontend-lime-three-65.vercel.app
+        value: https://self-harm-detection.vercel.app,https://frontend-lime-three-65.vercel.app
       - key: MFA_ISSUER
         value: SafeSignal
       - key: GOOGLE_CLIENT_ID
