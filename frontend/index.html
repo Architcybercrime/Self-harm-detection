@@ -102,15 +102,55 @@
   </div>
 
   <!-- SECTION 4: CHAPTER / DETECTION (normal vertical scroll) -->
+  <!-- SECTION 4: CHAPTER / DETECTION -->
   <section class="chapter-section section-white">
     <div class="chapter-left reveal-left">
       <div class="chapter-label"><div class="dot"></div><div class="chapter-label-text" data-i18n="ch-label">DETECTION</div></div>
       <div class="chapter-quote" data-i18n="ch-quote">"The words we choose reveal more about our state of mind than we realise."</div>
-      <div class="chapter-small-img"></div>
+
+      <!-- Option 3: Animated text analysis mockup -->
+      <div class="analysis-mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot red"></div>
+          <div class="mockup-dot yellow"></div>
+          <div class="mockup-dot green"></div>
+          <span class="mockup-title">safesignal — analysis</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-label">// INPUT</div>
+          <div class="mockup-input" id="mockupInput"></div>
+          <div class="mockup-label" style="margin-top:16px;">// RESULT</div>
+          <div class="mockup-result" id="mockupResult">
+            <span class="mockup-risk" id="mockupRisk"></span>
+            <div class="mockup-score-wrap"><div class="mockup-score-bar" id="mockupScoreBar"></div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="chapter-right">
-      <div class="chapter-right-img"></div>
-      <div class="chapter-body reveal" data-i18n="ch-body">A system that learns the subtle grammar of distress: the shift from "I feel tired" to "I feel nothing". Pattern recognition that goes deeper than any keyword list.</div>
+
+      <div class="chapter-body reveal" data-i18n="ch-body">A system that learns the subtle grammar of distress — the shift from <em>"I feel tired"</em> to <em>"I feel nothing"</em>. Pattern recognition that goes deeper than any keyword list.</div>
+
+      <!-- Option 2: Capability cards -->
+      <div class="capability-cards">
+        <div class="cap-card reveal">
+          <div class="cap-icon">📝</div>
+          <div class="cap-title">TEXT PATTERNS</div>
+          <div class="cap-desc">NLP model scans for linguistic distress markers, tone shifts, and semantic risk clusters in written text.</div>
+        </div>
+        <div class="cap-card reveal" style="transition-delay:0.1s">
+          <div class="cap-icon">😐</div>
+          <div class="cap-title">FACIAL CUES</div>
+          <div class="cap-desc">DeepFace detects micro-expressions and affective states through real-time camera feed analysis.</div>
+        </div>
+        <div class="cap-card reveal" style="transition-delay:0.2s">
+          <div class="cap-icon">🎤</div>
+          <div class="cap-title">VOICE MARKERS</div>
+          <div class="cap-desc">Librosa captures pitch stress, tremor, speech rate, and vocal energy from microphone input.</div>
+        </div>
+      </div>
+
     </div>
   </section>
 
