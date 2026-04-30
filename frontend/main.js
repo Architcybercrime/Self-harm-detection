@@ -291,31 +291,76 @@ function displayResult(level, score, signals) {
 }
 
 const API_BASE = (typeof window.API_BASE !== 'undefined' ? window.API_BASE : 'https://safesignal-api.onrender.com') + '/api';
-let authToken = localStorage.getItem('auth_token');
+
+// Use 'token' key — matches what login.html saves.
+// Fall back to 'auth_token' for backward-compat.
+let authToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
+
+/* ── BACKEND STATUS ──────────────────────────────────
+   Render free tier sleeps after ~15 min of inactivity.
+   We pre-warm it as soon as the page loads so by the
+   time the user scrolls to the analyse section the
+   server is already awake.
+   ────────────────────────────────────────────────── */
+let _backendReady   = false;
+let _warmingPromise = null;
+
+function setBackendStatus(state) {
+  const badge = document.getElementById('backendStatus');
+  if (!badge) return;
+  const map = {
+    connecting: ['BACKEND CONNECTING…',  '#D4A017'],
+    ready:      ['● BACKEND READY',       '#2A8A4A'],
+    slow:       ['⏳ BACKEND WAKING UP — PLEASE WAIT', '#D4A017'],
+    error:      ['✕ BACKEND OFFLINE',     '#E4032E'],
+  };
+  const [text, color] = map[state] || map.error;
+  badge.textContent   = text;
+  badge.style.color   = color;
+  badge.style.display = 'block';
+}
+
+function warmBackend() {
+  if (_warmingPromise) return _warmingPromise;
+  setBackendStatus('connecting');
+  _warmingPromise = fetch(API_BASE + '/health', { method: 'GET' })
+    .then(r => {
+      if (r.ok) { _backendReady = true; setBackendStatus('ready'); }
+      else       { setBackendStatus('error'); }
+    })
+    .catch(() => setBackendStatus('error'));
+  return _warmingPromise;
+}
+
+// Start warming immediately — by the time the user scrolls to
+// the analyse section the 30-second cold-start is usually done.
+warmBackend();
 
 async function ensureAuth() {
   if (authToken) return true;
 
+  // Try registering a demo account (silently ignore if it already exists)
   try {
     await fetch(`${API_BASE}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'demo', password: 'demo123' })
+      body: JSON.stringify({ username: 'safesignal_demo', password: 'Demo@SafeSignal24' })
     });
   } catch (e) {}
 
-  const res = await fetch(`${API_BASE}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'demo', password: 'demo123' })
-  });
-
-  const data = await res.json();
-  if (data.access_token) {
-    authToken = data.access_token;
-    localStorage.setItem('auth_token', authToken);
-    return true;
-  }
+  try {
+    const res  = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'safesignal_demo', password: 'Demo@SafeSignal24' })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      authToken = data.access_token;
+      localStorage.setItem('token', authToken);  // consistent key
+      return true;
+    }
+  } catch (e) {}
 
   return false;
 }
@@ -415,41 +460,69 @@ function applyVoiceResult(data) {
   }
 }
 
-function runAnalysis() {
+async function runAnalysis() {
   const text = document.getElementById('textInput').value.trim();
   if (!text) return;
 
-  const btn = document.getElementById('analyzeBtn');
-  btn.innerHTML = 'ANALYSING...';
+  const btn     = document.getElementById('analyzeBtn');
+  const noteEl  = document.getElementById('voiceStatus');
+  btn.innerHTML = '<span class="plus">+</span> ANALYSING…';
   btn.disabled  = true;
 
-  // Call backend API
-  ensureAuth()
-    .then(() => fetch(`${API_BASE}/predict`, {
+  // If backend not ready yet, tell the user instead of hanging silently
+  if (!_backendReady) {
+    if (noteEl) { noteEl.textContent = 'Backend is waking up from sleep — this takes ~30 s on first use. Please wait…'; noteEl.style.display = 'block'; }
+    setBackendStatus('slow');
+    await warmBackend();
+  }
+
+  try {
+    const authed = await ensureAuth();
+    if (!authed) {
+      displayResult('CONNECTION ERROR', 0, ['Could not reach backend. Check your internet connection.']);
+      setBackendStatus('error');
+      return;
+    }
+
+    const res  = await fetch(`${API_BASE}/predict`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type':  'application/json',
         'Authorization': `Bearer ${authToken}`
       },
       body: JSON.stringify({ text })
-    }))
-    .then(r => r.json())
-    .then(data => {
-      const level = data.risk_level === 'HIGH' ? 'HIGH RISK' : data.risk_level === 'MEDIUM' ? 'MODERATE' : 'LOW RISK';
-      const score = Math.round(data.confidence * 100);
-      const signals = [data.message];
-      displayResult(level, score, signals);
-    })
-    .catch(error => {
-      console.error('Backend Error:', error);
-      document.getElementById('resultLevel').textContent = 'CONNECTION ERROR';
-      document.getElementById('resultLevel').style.color = '#E4032E';
-      document.getElementById('result').classList.add('show');
-    })
-    .finally(() => {
-      btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS';
-      btn.disabled = false;
     });
+
+    if (res.status === 401) {
+      // Token expired — clear and retry once
+      authToken = null;
+      localStorage.removeItem('token');
+      const retried = await ensureAuth();
+      if (!retried) { displayResult('AUTH ERROR', 0, ['Session expired. Please refresh the page.']); return; }
+      return runAnalysis();
+    }
+
+    const data  = await res.json();
+    const level = data.risk_level === 'HIGH' ? 'HIGH RISK'
+                : data.risk_level === 'MEDIUM' ? 'MODERATE'
+                : 'LOW RISK';
+    const score   = Math.round((data.confidence || 0) * 100);
+    const signals = [];
+    if (data.message)                    signals.push(data.message);
+    if (data.risk_indicators?.severity)  signals.push('severity: ' + data.risk_indicators.severity);
+    if (data.sentiment_score !== undefined) signals.push('sentiment: ' + data.sentiment_score.toFixed(2));
+    displayResult(level, score, signals);
+    setBackendStatus('ready');
+    if (noteEl) noteEl.style.display = 'none';
+
+  } catch (error) {
+    console.error('Analysis error:', error);
+    displayResult('CONNECTION ERROR', 0, ['Backend unreachable. Wait 30 s and try again — Render may be waking up.']);
+    setBackendStatus('error');
+  } finally {
+    btn.innerHTML = '<span class="plus">+</span> RUN ANALYSIS';
+    btn.disabled  = false;
+  }
 }
 
 // Ctrl+Enter to run
