@@ -51,7 +51,7 @@ class MultimodalInput(BaseModel):
 async def predict(data: TextInput, request: Request,
                   current_user: str = Depends(verify_token)):
     """Predict self-harm risk from text (92.2% accuracy)."""
-    from main import run_prediction, prediction_log
+    from ml_engine import run_prediction, prediction_log
     result = run_prediction(data.text)
     ip     = get_client_ip(request)
 
@@ -101,7 +101,7 @@ async def generate_report_endpoint(data: TextInput,
                                     current_user: str = Depends(verify_token)):
     """Generate a professional psychological risk assessment PDF report."""
     from utils.report_generator import generate_report as gen_report
-    from main import run_prediction
+    from ml_engine import run_prediction
 
     prediction_data = run_prediction(data.text)
     prediction_data['analysis_timestamp'] = datetime.datetime.now().isoformat()
@@ -125,7 +125,7 @@ async def generate_report_endpoint(data: TextInput,
 async def predict_multimodal(data: MultimodalInput,
                               current_user: str = Depends(verify_token)):
     """Combined multimodal risk prediction (text + face + speech)."""
-    from main import run_prediction, prediction_log
+    from ml_engine import run_prediction, prediction_log
     text_result = face_result = speech_result = None
     text = ""
 
@@ -178,7 +178,7 @@ async def predict_batch(
     file: UploadFile = File(...),
 ):
     """Batch risk analysis from a CSV file (max 500 rows). CSV must have a 'text' column."""
-    from main import run_prediction
+    from ml_engine import run_prediction
 
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Upload a .csv file")

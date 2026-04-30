@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api", tags=["Monitoring"])
 @router.get("/stats", tags=["Statistics"])
 def stats(current_user: str = Depends(verify_token)):
     """Get session-level prediction statistics from the in-memory log."""
-    from main import prediction_log
+    from ml_engine import prediction_log
     if not prediction_log:
         return {"message": "No predictions yet"}
 
