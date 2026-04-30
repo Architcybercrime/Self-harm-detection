@@ -5,7 +5,7 @@ import time
 import os
 
 # ── CONFIG ───────────────────────────────────────────
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 st.set_page_config(
     page_title="Self Harm Detection System",
@@ -29,10 +29,10 @@ st.markdown("""
 # ── HELPERS ──────────────────────────────────────────
 def get_headers():
     token = st.session_state.get('token', '')
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}'
-    }
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    return headers
 
 
 def api_post(endpoint, data):
@@ -48,6 +48,15 @@ def api_get(endpoint):
     try:
         r = requests.get(f"{API_URL}{endpoint}",
                          headers=get_headers(), timeout=10)
+        return r.json(), r.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
+def api_put(endpoint, data):
+    try:
+        r = requests.put(f"{API_URL}{endpoint}",
+                         json=data, headers=get_headers(), timeout=10)
         return r.json(), r.status_code
     except Exception as e:
         return {"error": str(e)}, 500
@@ -293,6 +302,11 @@ with st.sidebar:
             "📊 Monitoring",
             "📈 History",
             "🔑 API Keys",
+            "🛡️ Admin Analytics",
+            "🔐 MFA Settings",
+            "🔔 Alert Settings",
+            "📉 Risk Trend",
+            "📂 Batch CSV",
         ])
 
     st.divider()
@@ -971,3 +985,348 @@ console.log(data);
                 st.error(str(e))
     with col2:
         st.warning("⚠️ Revoking will immediately disable your current API key!")
+
+
+# ── ADMIN ANALYTICS ──────────────────────────────────
+elif page == "🛡️ Admin Analytics":
+    st.title("🛡️ Admin Analytics")
+    st.markdown("Aggregated risk trends and security audit logs — **admin accounts only**")
+    st.divider()
+
+    try:
+        import pandas as pd
+        import altair as alt
+    except ImportError:
+        st.error("pandas and altair are required for charts. Run: pip install pandas altair")
+        st.stop()
+
+    if st.button("🔄 Refresh"):
+        st.rerun()
+
+    analytics, code = api_get("/api/admin/analytics")
+
+    if code == 403:
+        st.error("🔒 Admin access required. Ask your administrator to grant you the 'admin' role in Supabase.")
+        st.stop()
+    elif code != 200:
+        st.error(f"Could not fetch analytics: {analytics.get('detail', 'Unknown error')}")
+        st.stop()
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Total Predictions",  analytics.get("total_predictions", 0))
+    col2.metric("High-Risk Count",    analytics.get("high_risk_count", 0))
+    col3.metric("Alerts Triggered",   analytics.get("alert_count", 0))
+    col4.metric("High-Risk Rate",     f"{analytics.get('high_risk_rate', 0):.1%}")
+    col5.metric("Avg Confidence",     f"{analytics.get('avg_confidence', 0):.1%}")
+
+    st.divider()
+
+    # ── Modality breakdown pie-ish bar chart ─────────
+    by_mod = analytics.get("by_modality", {})
+    if by_mod:
+        st.subheader("Predictions by Modality")
+        df_mod = pd.DataFrame(
+            [{"Modality": k.title(), "Count": v} for k, v in by_mod.items()]
+        )
+        chart_mod = alt.Chart(df_mod).mark_bar().encode(
+            x=alt.X("Count:Q"),
+            y=alt.Y("Modality:N", sort="-x"),
+            color=alt.Color("Modality:N", legend=None),
+            tooltip=["Modality", "Count"],
+        ).properties(height=200)
+        st.altair_chart(chart_mod, use_container_width=True)
+
+    # ── Daily risk trend line chart ──────────────────
+    daily = analytics.get("daily_counts", {})
+    if daily:
+        st.subheader("Daily Risk Trend (last 14 days)")
+        rows = [
+            {"Date": d, "Type": "Total",     "Count": v["total"]}
+            for d, v in daily.items()
+        ] + [
+            {"Date": d, "Type": "High Risk", "Count": v["high"]}
+            for d, v in daily.items()
+        ]
+        df_daily = pd.DataFrame(rows)
+        df_daily["Date"] = pd.to_datetime(df_daily["Date"])
+        chart_daily = alt.Chart(df_daily).mark_line(point=True).encode(
+            x=alt.X("Date:T", title="Date"),
+            y=alt.Y("Count:Q", title="Predictions"),
+            color=alt.Color("Type:N",
+                            scale=alt.Scale(domain=["Total", "High Risk"],
+                                            range=["#4FC3F7", "#EF5350"])),
+            tooltip=["Date:T", "Type:N", "Count:Q"],
+        ).properties(height=300)
+        st.altair_chart(chart_daily, use_container_width=True)
+
+    st.divider()
+
+    # ── Audit log viewer ─────────────────────────────
+    st.subheader("🔍 Security Audit Logs")
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        audit_limit = st.number_input("Max rows", 10, 500, 50, step=10)
+    with col_b:
+        audit_event = st.selectbox("Filter event type", [
+            "", "LOGIN_SUCCESS", "LOGIN_FAILURE", "REGISTER_SUCCESS",
+            "REGISTER_FAILURE", "MFA_SETUP", "MFA_ENABLED", "MFA_DISABLED",
+            "MFA_FAILURE", "API_KEY_GENERATED", "API_KEY_REVOKED",
+            "PREDICTION_MADE", "HIGH_RISK_ALERT", "UNAUTHORIZED_ACCESS",
+        ])
+    with col_c:
+        audit_user = st.text_input("Filter username")
+
+    params = f"?limit={audit_limit}"
+    if audit_event:
+        params += f"&event_type={audit_event}"
+    if audit_user:
+        params += f"&username={audit_user}"
+
+    audit_data, audit_code = api_get(f"/api/admin/audit-logs{params}")
+
+    if audit_code == 200 and audit_data.get("success"):
+        logs = audit_data.get("data", [])
+        if logs:
+            df_audit = pd.DataFrame(logs)
+            cols_order = [c for c in
+                ["timestamp", "event_type", "username", "ip_address",
+                 "success", "severity", "details"]
+                if c in df_audit.columns]
+            st.dataframe(df_audit[cols_order], use_container_width=True)
+            st.caption(f"{len(logs)} records shown")
+        else:
+            st.info("No audit log entries found for the selected filters.")
+    elif audit_code == 403:
+        st.error("Admin access required to view audit logs.")
+    else:
+        st.error("Could not load audit logs.")
+
+
+# ── MFA SETTINGS ─────────────────────────────────────
+elif page == "🔐 MFA Settings":
+    st.title("🔐 MFA Settings")
+    st.markdown("Manage two-factor authentication (TOTP) for your account")
+    st.divider()
+
+    status_data, _ = api_get("/api/auth/mfa/status")
+    mfa_on = status_data.get("mfa_enabled", False)
+
+    if mfa_on:
+        st.success("✅ MFA is **enabled** on your account.")
+        st.divider()
+        st.subheader("Disable MFA")
+        st.warning("You will need your authenticator app to confirm.")
+        disable_code = st.text_input("Enter 6-digit TOTP code to disable MFA",
+                                     max_chars=6, key="disable_totp")
+        if st.button("❌ Disable MFA", type="primary"):
+            if len(disable_code) == 6 and disable_code.isdigit():
+                res, code = api_post("/api/auth/mfa/disable", {"totp_code": disable_code})
+                if code == 200 and res.get("success"):
+                    st.success("MFA disabled successfully.")
+                    st.rerun()
+                else:
+                    st.error(res.get("detail", "Failed to disable MFA"))
+            else:
+                st.warning("Enter a valid 6-digit code")
+    else:
+        st.warning("⚠️ MFA is **not enabled** on your account.")
+        st.divider()
+        st.subheader("Enable MFA")
+
+        if st.button("🔑 Generate QR Code", type="primary"):
+            setup_data, setup_code = api_post("/api/auth/mfa/setup", {})
+            if setup_code == 200 and setup_data.get("success"):
+                st.session_state["mfa_setup_data"] = setup_data
+            else:
+                st.error(setup_data.get("detail", "Setup failed"))
+
+        if "mfa_setup_data" in st.session_state:
+            sd = st.session_state["mfa_setup_data"]
+            st.image(sd["qr_code"], caption="Scan with Google Authenticator / Authy", width=250)
+            st.code(sd["secret"], language=None)
+            st.caption("If you can't scan, enter the secret manually in your app.")
+            st.divider()
+            verify_code = st.text_input("Enter the 6-digit code from your app to activate",
+                                        max_chars=6, key="verify_totp")
+            if st.button("✅ Activate MFA"):
+                if len(verify_code) == 6 and verify_code.isdigit():
+                    res, code = api_post("/api/auth/mfa/verify-setup",
+                                        {"totp_code": verify_code})
+                    if code == 200 and res.get("success"):
+                        st.success("🎉 MFA enabled! Your account is now protected.")
+                        del st.session_state["mfa_setup_data"]
+                        st.rerun()
+                    else:
+                        st.error(res.get("detail", "Invalid code — try again"))
+                else:
+                    st.warning("Enter a valid 6-digit code")
+
+
+# ── ALERT SETTINGS ───────────────────────────────────
+elif page == "🔔 Alert Settings":
+    st.title("🔔 Alert Settings")
+    st.markdown("Configure where high-risk alerts are sent (email, SMS, WhatsApp).")
+    st.divider()
+
+    prof_data, pcode = api_get("/api/user/profile")
+    profile = prof_data.get("profile", {}) if pcode == 200 else {}
+
+    with st.form("alert_settings_form"):
+        st.subheader("Contact Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            alert_email = st.text_input("Alert Email",
+                value=profile.get("alert_email") or "",
+                placeholder="you@example.com")
+            alert_phone = st.text_input("SMS Phone Number (with country code)",
+                value=profile.get("alert_phone") or "",
+                placeholder="+919876543210")
+        with col2:
+            alert_whatsapp = st.text_input("WhatsApp Number (with country code)",
+                value=profile.get("alert_whatsapp") or "",
+                placeholder="+919876543210")
+            display_name = st.text_input("Display Name",
+                value=profile.get("display_name") or "")
+
+        st.subheader("Enable / Disable Channels")
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            email_on = st.checkbox("📧 Email Alerts",
+                value=bool(profile.get("email_alerts")))
+        with col4:
+            sms_on = st.checkbox("💬 SMS Alerts",
+                value=bool(profile.get("sms_alerts")))
+        with col5:
+            wa_on = st.checkbox("📱 WhatsApp Alerts",
+                value=bool(profile.get("whatsapp_alerts")))
+
+        submitted = st.form_submit_button("💾 Save Settings", type="primary")
+        if submitted:
+            payload = {
+                "display_name":    display_name or None,
+                "alert_email":     alert_email or None,
+                "alert_phone":     alert_phone or None,
+                "alert_whatsapp":  alert_whatsapp or None,
+                "email_alerts":    email_on,
+                "sms_alerts":      sms_on,
+                "whatsapp_alerts": wa_on,
+            }
+            res, code = api_put("/api/user/profile", payload)
+            if code == 200 and res.get("success"):
+                st.success("✅ Alert settings saved!")
+            else:
+                st.error(f"Error saving settings: {res.get('detail', code)}")
+
+    st.divider()
+    st.info(
+        "**How alerts work:**\n"
+        "- When the model detects HIGH risk, it immediately fires all enabled channels.\n"
+        "- Email is sent via SendGrid; SMS and WhatsApp via Twilio.\n"
+        "- You must add your API keys to Render environment variables:\n"
+        "  `SENDGRID_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`"
+    )
+
+
+# ── RISK TREND ───────────────────────────────────────
+elif page == "📉 Risk Trend":
+    st.title("📉 Your Risk Trend")
+    st.markdown("Longitudinal view of your prediction history over time.")
+    st.divider()
+
+    days = st.slider("Days to look back", min_value=7, max_value=90, value=30, step=7)
+    trend_data, tcode = api_get(f"/api/user/risk-trend?days={days}")
+
+    if tcode != 200 or not trend_data.get("success"):
+        st.error("Could not fetch trend data — make sure you are logged in.")
+    else:
+        trend = trend_data.get("trend", [])
+        if not trend:
+            st.info("No predictions found in this time window. Run some analyses first!")
+        else:
+            try:
+                import altair as alt
+                import pandas as pd
+                df = pd.DataFrame(trend)
+                df["date"] = pd.to_datetime(df["date"])
+
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Analyses", sum(r["total"] for r in trend))
+                col2.metric("High-Risk Days",
+                            sum(1 for r in trend if r["high_risk"] > 0))
+                col3.metric("Peak Confidence",
+                            f"{max(r['avg_confidence'] for r in trend):.1%}")
+
+                st.subheader("Daily Prediction Volume")
+                bar = alt.Chart(df).mark_bar(color="#1e88e5").encode(
+                    x=alt.X("date:T", title="Date"),
+                    y=alt.Y("total:Q", title="Predictions"),
+                    tooltip=["date:T", "total:Q", "high_risk:Q"],
+                ).properties(height=250)
+                st.altair_chart(bar, use_container_width=True)
+
+                st.subheader("High-Risk Count Over Time")
+                line = alt.Chart(df).mark_line(
+                    color="#e53935", point=True
+                ).encode(
+                    x=alt.X("date:T", title="Date"),
+                    y=alt.Y("high_risk:Q", title="High-Risk Count"),
+                    tooltip=["date:T", "high_risk:Q", "avg_confidence:Q"],
+                ).properties(height=250)
+                st.altair_chart(line, use_container_width=True)
+
+                st.subheader("Raw Data")
+                st.dataframe(df, use_container_width=True)
+            except ImportError:
+                # Fallback if altair not installed
+                st.subheader("Trend Data")
+                st.json(trend)
+
+
+# ── BATCH CSV ────────────────────────────────────────
+elif page == "📂 Batch CSV":
+    st.title("📂 Batch CSV Analysis")
+    st.markdown("Upload a CSV with a `text` column to score up to **500 rows** at once.")
+    st.divider()
+
+    st.info("**CSV format:** Must have a column named `text`. Other columns are ignored.")
+    uploaded = st.file_uploader("Choose a CSV file", type=["csv"])
+
+    if uploaded:
+        if st.button("🚀 Run Batch Analysis", type="primary"):
+            with st.spinner("Analysing all rows…"):
+                try:
+                    r = requests.post(
+                        f"{API_URL}/api/predict-batch",
+                        files={"file": (uploaded.name, uploaded.getvalue(), "text/csv")},
+                        headers={"Authorization": get_headers().get("Authorization", "")},
+                        timeout=120,
+                    )
+                    data = r.json()
+                except Exception as e:
+                    st.error(f"Request failed: {e}")
+                    data = {}
+
+            if data.get("success"):
+                results = data.get("results", [])
+                total   = data.get("total_rows", 0)
+                high    = data.get("high_risk_rows", 0)
+
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Rows Analysed", total)
+                col2.metric("High Risk", high)
+                col3.metric("High-Risk Rate", f"{high/total:.1%}" if total else "—")
+
+                try:
+                    import pandas as pd
+                    df = pd.DataFrame(results)
+                    df["risk_colour"] = df["risk_level"].map(
+                        {"HIGH": "🔴", "LOW": "🟢"}).fillna("⚪")
+                    st.dataframe(df, use_container_width=True)
+
+                    csv_out = df.to_csv(index=False).encode()
+                    st.download_button("⬇️ Download Results CSV", csv_out,
+                                       file_name="batch_results.csv", mime="text/csv")
+                except ImportError:
+                    st.json(results)
+            else:
+                st.error(f"API error: {data.get('detail', r.status_code)}")
