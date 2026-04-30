@@ -295,7 +295,7 @@ const _H = [
   'wish i were dead','ready to die','nothing to live for',"don't want to live",
   "don't want to exist","don't want to be here",'tired of living',
   'everyone would be better without me','no way out','death is the answer',
-  'ending it all','end it all','disappear forever','want everything to end'
+  'ending it all','end it all','disappear forever','want everything to end', 'I dont see the point anymore'
 ];
 const _M = [
   'hopeless','helpless','worthless','feel empty','feel nothing','feeling empty',
