@@ -226,7 +226,7 @@
        STEP 4: Show alert message
        type = 'error' → red, type = 'success' → green
     ───────────────────────────────────────────── */
-    /* Pre-warm backend the moment this page loads */
+    /* Pre-warm backend silently */
     fetch(API + '/health', { method: 'GET' }).catch(() => {});
 
     function showAlert(msg, type = 'error') {
@@ -289,18 +289,18 @@
       document.getElementById('alertBox').style.display = 'none';
 
       /* Retry-aware fetch — Render free tier cold starts take ~30 s */
-      async function fetchWithRetry(url, options, retries = 3) {
+      async function fetchWithRetry(url, options, retries = 4) {
         for (let attempt = 1; attempt <= retries; attempt++) {
           try {
             const ctrl = new AbortController();
-            const tid  = setTimeout(() => ctrl.abort(), 20000);
+            const tid  = setTimeout(() => ctrl.abort(), 35000); // 35 s per attempt
             const res  = await fetch(url, { ...options, signal: ctrl.signal });
             clearTimeout(tid);
             return res;
           } catch (e) {
             if (attempt === retries) throw e;
-            showAlert(`Backend waking up… attempt ${attempt}/${retries}. Please wait 10 s.`, 'info');
-            await new Promise(r => setTimeout(r, 8000));
+            showAlert(`Server starting up… attempt ${attempt}/${retries}. Please wait (~30 s on first load).`, 'info');
+            await new Promise(r => setTimeout(r, 10000));
           }
         }
       }

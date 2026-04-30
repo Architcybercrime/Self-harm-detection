@@ -56,3 +56,5 @@ tensorflow-cpu==2.18.0
 deepface==0.0.93
 # Pillow pinned for moviepy compatibility
 pillow>=9.2.0,<12.0
+# PDF report generation
+reportlab==4.2.5
