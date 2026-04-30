@@ -341,18 +341,18 @@
       document.getElementById('alertBox').style.display = 'none';
 
       /* Retry-aware fetch — Render free tier needs ~30 s to wake */
-      async function fetchWithRetry(url, options, retries = 3) {
+      async function fetchWithRetry(url, options, retries = 4) {
         for (let attempt = 1; attempt <= retries; attempt++) {
           try {
             const ctrl = new AbortController();
-            const tid  = setTimeout(() => ctrl.abort(), 20000); // 20 s per attempt
+            const tid  = setTimeout(() => ctrl.abort(), 35000); // 35 s per attempt
             const res  = await fetch(url, { ...options, signal: ctrl.signal });
             clearTimeout(tid);
             return res;
           } catch (e) {
             if (attempt === retries) throw e;
-            showAlert(`Backend waking up… attempt ${attempt}/${retries}. Please wait.`, 'info');
-            await new Promise(r => setTimeout(r, 8000)); // wait 8 s between retries
+            showAlert(`Server starting up… attempt ${attempt}/${retries}. Please wait (~30 s on first load).`, 'info');
+            await new Promise(r => setTimeout(r, 10000));
           }
         }
       }
