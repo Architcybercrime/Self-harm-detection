@@ -1143,3 +1143,65 @@ const precisionObserver = new IntersectionObserver((entries) => {
 
 const precisionSection = document.querySelector('.precision-overlay');
 if (precisionSection) precisionObserver.observe(precisionSection);
+/* ── ANALYSIS MOCKUP TYPEWRITER ANIMATION ── */
+(function() {
+  const examples = [
+    { text: "I don't see the point anymore...", risk: 'HIGH RISK', score: 88, color: '#E4032E' },
+    { text: "Feeling really tired and empty lately.", risk: 'MODERATE', score: 52, color: '#D4A017' },
+    { text: "Had a great day with friends today!", risk: 'LOW RISK',  score: 12, color: '#2A8A4A' },
+  ];
+  let exIdx = 0, charIdx = 0, typing = true, waiting = false;
+
+  function runMockup() {
+    const inputEl   = document.getElementById('mockupInput');
+    const riskEl    = document.getElementById('mockupRisk');
+    const scoreBar  = document.getElementById('mockupScoreBar');
+    if (!inputEl) return;
+
+    const ex = examples[exIdx];
+
+    if (waiting) return;
+
+    if (typing) {
+      if (charIdx <= ex.text.length) {
+        inputEl.textContent = ex.text.slice(0, charIdx);
+        charIdx++;
+        setTimeout(runMockup, 55);
+      } else {
+        // Show result
+        waiting = true;
+        setTimeout(() => {
+          riskEl.textContent  = ex.risk;
+          riskEl.style.color  = ex.color;
+          scoreBar.style.background = ex.color;
+          scoreBar.style.width = ex.score + '%';
+          waiting = false;
+          typing  = false;
+          setTimeout(() => {
+            // Reset and move to next example
+            scoreBar.style.width = '0%';
+            riskEl.textContent   = '';
+            inputEl.textContent  = '';
+            charIdx = 0;
+            typing  = true;
+            exIdx   = (exIdx + 1) % examples.length;
+            setTimeout(runMockup, 400);
+          }, 2500);
+        }, 600);
+      }
+    }
+  }
+
+  // Start when section scrolls into view
+  const mockupObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        runMockup();
+        mockupObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const mockupEl = document.querySelector('.analysis-mockup');
+  if (mockupEl) mockupObserver.observe(mockupEl);
+})();
