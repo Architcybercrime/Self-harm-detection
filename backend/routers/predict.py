@@ -61,8 +61,11 @@ async def predict(data: TextInput, request: Request,
         "confidence": result['confidence']
     })
 
-    log_prediction(len(data.text.split()), result['risk_level'],
-                   result['confidence'], result['sentiment_score'])
+    try:
+        log_prediction(len(data.text.split()), result['risk_level'],
+                       result['confidence'], result['sentiment_score'])
+    except Exception:
+        pass
     save_prediction(data.text, result['risk_level'], result['confidence'],
                     result['sentiment_score'], "text", result['alert_triggered'])
     audit_prediction(current_user, result['risk_level'], "text",
