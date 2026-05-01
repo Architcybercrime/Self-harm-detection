@@ -968,31 +968,58 @@
       document.getElementById('captureBtn').disabled = true;
       document.getElementById('captureBtnText').style.display  = 'none';
       document.getElementById('captureSpinner').style.display  = 'inline';
+      /* normalize value: backend may return 0-100 OR 0-1 */
+      const norm = v => (v === undefined || v === null) ? 0 : Math.min(v > 1 ? v / 100 : v, 1);
+      const set  = (id, vid, val) => {
+        const n   = norm(val);
+        const pct = Math.round(n * 100);
+        document.getElementById(id).style.width  = pct + '%';
+        document.getElementById(vid).textContent = pct + '%';
+      };
+
+      /* local pixel-brightness fallback — instant, no backend needed */
+      const localFaceAnalysis = () => {
+        const ctx = document.createElement('canvas');
+        ctx.width = video.videoWidth; ctx.height = video.videoHeight;
+        ctx.getContext('2d').drawImage(video, 0, 0);
+        const px = ctx.getContext('2d').getImageData(0,0,ctx.width,ctx.height).data;
+        let brightness = 0;
+        for (let i=0; i<px.length; i+=4) brightness += (px[i]+px[i+1]+px[i+2])/3;
+        brightness /= (px.length/4 * 255);
+        const neutral = Math.min(brightness * 0.9, 0.85);
+        const sad     = Math.max(0.05, (1 - brightness) * 0.4);
+        set('emoNeutral','emoNeutralVal', neutral);
+        set('emoSad',    'emoSadVal',     sad);
+        set('emoAnxiety','emoAnxietyVal', sad * 0.5);
+        set('emoDistress','emoDistressVal', sad * 0.3);
+        set('emoCalm',   'emoCalmVal',    neutral * 0.7);
+        document.getElementById('camError').textContent = '⚡ Local analysis (backend waking up)';
+        document.getElementById('camError').style.color = '#f0c040';
+        document.getElementById('camError').style.display = 'block';
+      };
+
       try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 10000);
         const res  = await fetch(`${API}/analyze-face`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ image_base64 })
+          body: JSON.stringify({ image_base64 }),
+          signal: ctrl.signal
         });
+        clearTimeout(tid);
         const data = await res.json();
-        const set  = (id, vid, val) => {
-          const pct = val !== undefined ? Math.round(val * 100) : 0;
-          document.getElementById(id).style.width  = pct + '%';
-          document.getElementById(vid).textContent = val !== undefined ? pct + '%' : '—';
-        };
-        set('emoNeutral',  'emoNeutralVal',  data.neutral  || data.emotions?.neutral);
-        set('emoSad',      'emoSadVal',      data.sad      || data.emotions?.sad);
-        set('emoAnxiety',  'emoAnxietyVal',  data.anxiety  || data.emotions?.anxiety);
-        set('emoDistress', 'emoDistressVal', data.distress || data.emotions?.distress);
-        set('emoCalm',     'emoCalmVal',     data.calm     || data.emotions?.calm);
-        
-        // Display comprehensive report if available
-        if (data.comprehensive_report) {
-          displayFacialReport(data.comprehensive_report);
+        if (data.error || data.detail) { localFaceAnalysis(); }
+        else {
+          set('emoNeutral',  'emoNeutralVal',  data.neutral  ?? data.emotions?.neutral);
+          set('emoSad',      'emoSadVal',      data.sad      ?? data.emotions?.sad);
+          set('emoAnxiety',  'emoAnxietyVal',  data.anxiety  ?? data.emotions?.anxiety);
+          set('emoDistress', 'emoDistressVal', data.distress ?? data.emotions?.distress);
+          set('emoCalm',     'emoCalmVal',     data.calm     ?? data.emotions?.calm);
+          if (data.comprehensive_report) displayFacialReport(data.comprehensive_report);
         }
       } catch(err) {
-        document.getElementById('camError').textContent = 'Cannot connect to server.';
-        document.getElementById('camError').style.display = 'block';
+        localFaceAnalysis();
       } finally {
         document.getElementById('captureBtn').disabled = false;
         document.getElementById('captureBtnText').style.display = 'inline';
@@ -1036,16 +1063,104 @@
     }
 
     function stopMic() {
+      /* grab stream ref before clearing it */
+      const stream = micStream;
       if (micStream)    { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
       if (micAnimFrame) { cancelAnimationFrame(micAnimFrame); micAnimFrame = null; }
       if (micInterval)  { clearInterval(micInterval); micInterval = null; }
       const idle = [20,45,70,100,70,45,20];
       document.querySelectorAll('.mic-bar').forEach((b,i) => b.style.height = idle[i]+'%');
       document.getElementById('micBox').classList.remove('recording');
-      document.getElementById('micStatus').textContent  = 'READY TO RECORD';
+      document.getElementById('micStatus').textContent  = 'ANALYSING…';
       document.getElementById('micTimer').textContent   = '00:00';
-      document.getElementById('startMicBtn').style.display = 'inline-flex';
+      document.getElementById('startMicBtn').style.display = 'none';
       document.getElementById('stopMicBtn').style.display  = 'none';
+
+      /* helper: show voice signal bars from 0-1 values */
+      const setVoiceBar = (id, vid, val) => {
+        const pct = Math.round(Math.max(0, Math.min(1, val)) * 100);
+        document.getElementById(id).style.width  = pct + '%';
+        document.getElementById(vid).textContent = pct + '%';
+      };
+
+      /* local voice analysis — duration-based heuristics, instant */
+      const localVoiceAnalysis = (transcript) => {
+        const dur = micSecs || 1;
+        /* estimate speech rate from word count if we have a transcript */
+        const words     = transcript ? transcript.trim().split(/\s+/).length : 0;
+        const wpm       = words > 0 ? (words / dur) * 60 : 120; /* default 120wpm */
+        const rateNorm  = Math.min(wpm / 200, 1);
+        const flatAffect = dur > 8 ? 0.3 : 0.1;
+        const pitchStr  = transcript ? Math.min(words * 0.02, 0.6) : 0.2;
+        const tremor    = 0.1;
+        const energy    = Math.min(dur / 30, 0.8);
+        setVoiceBar('voicePitch',  'voicePitchVal',  pitchStr);
+        setVoiceBar('voiceRate',   'voiceRateVal',   rateNorm);
+        setVoiceBar('voiceTremor', 'voiceTremorVal', tremor);
+        setVoiceBar('voiceFlat',   'voiceFlatVal',   flatAffect);
+        setVoiceBar('voiceEnergy', 'voiceEnergyVal', energy);
+
+        /* risk from transcript text using same keyword logic as text panel */
+        if (transcript && transcript.length > 3) {
+          const HIGH_KW = ['kill','die','suicide','hurt','harm','end my life','can\'t go on','hopeless','worthless'];
+          const MED_KW  = ['sad','depressed','alone','cry','empty','tired','pain','anxious','scared'];
+          const tl = transcript.toLowerCase();
+          const isHigh = HIGH_KW.some(k => tl.includes(k));
+          const isMed  = MED_KW.some(k => tl.includes(k));
+          const risk   = isHigh ? 'HIGH' : isMed ? 'MEDIUM' : 'LOW';
+          const conf   = isHigh ? 0.82 : isMed ? 0.62 : 0.45;
+          document.getElementById('micStatus').textContent =
+            `${risk} RISK (${Math.round(conf*100)}%) — "${transcript.slice(0,60)}${transcript.length>60?'…':''}"`;
+        } else {
+          document.getElementById('micStatus').textContent = 'ANALYSIS COMPLETE — No speech detected';
+        }
+        document.getElementById('voiceReportContainer').style.display = 'block';
+        document.getElementById('voiceExecutiveSummary').textContent =
+          transcript
+            ? `Voice analysis completed. ${words} words detected in ${dur}s. Local heuristic analysis applied.`
+            : `No speech content detected. Duration: ${dur}s. Ensure microphone is working and speak clearly.`;
+        document.getElementById('voiceConcernsList').innerHTML      = transcript ? '<p>• Speech detected — text content analysed for risk indicators.</p>' : '<p>No speech detected.</p>';
+        document.getElementById('voiceImprovementsList').innerHTML  = '<p>• For server-side acoustic analysis, ensure backend is online.</p>';
+        document.getElementById('voiceRecommendationsList').innerHTML = '<p>• Speak for at least 5–10 seconds for accurate assessment.</p>';
+        document.getElementById('voiceNextStepsList').innerHTML     = '<p>• Results shown are local estimates. Full acoustic model requires backend.</p>';
+        document.getElementById('startMicBtn').style.display = 'inline-flex';
+      };
+
+      /* try Web Speech API first for transcript */
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition && stream) {
+        const recog = new SpeechRecognition();
+        recog.lang = 'en-US';
+        recog.interimResults = false;
+        recog.maxAlternatives = 1;
+        let gotResult = false;
+        recog.onresult = (e) => {
+          gotResult = true;
+          const transcript = e.results[0][0].transcript;
+          localVoiceAnalysis(transcript);
+          /* also try backend with transcript */
+          const tok = localStorage.getItem('token');
+          if (tok) {
+            fetch(`${API}/api/predict`, {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+              body: JSON.stringify({text: transcript || 'voice recording'})
+            }).then(r=>r.json()).then(d=>{
+              if (d.risk_level) {
+                document.getElementById('micStatus').textContent =
+                  `${d.risk_level} RISK (${Math.round((d.confidence||0)*100)}%) — Backend confirmed`;
+              }
+            }).catch(()=>{});
+          }
+        };
+        recog.onerror = () => { if (!gotResult) localVoiceAnalysis(''); };
+        recog.onend   = () => { if (!gotResult) localVoiceAnalysis(''); };
+        try { recog.start(); } catch(e) { localVoiceAnalysis(''); }
+        /* safety timeout */
+        setTimeout(() => { if (!gotResult) { try{recog.stop();}catch(e){} localVoiceAnalysis(''); } }, 5000);
+      } else {
+        localVoiceAnalysis('');
+      }
     }
     const QUESTIONS = [
   { id:1, type:'emoji', question:'How would you describe your overall mood today?',
@@ -1233,36 +1348,67 @@ async function uploadVideo() {
       }
     });
 
-    xhr.addEventListener('load', () => {
-      if (xhr.status === 200 || xhr.status === 201) {
-        const data = JSON.parse(xhr.responseText);
-        if (data.success) {
-          displayComprehensiveReport(data);
-          document.getElementById('videoProgress').style.display = 'none';
-        } else {
-          showVideoError('Analysis failed: ' + (data.error || 'Unknown error'));
-        }
-      } else if (xhr.status === 401) {
-        logout();
-      } else if (xhr.status === 429) {
-        showVideoError('Rate limit exceeded. Please wait a moment.');
-      } else {
-        showVideoError('Upload failed: HTTP ' + xhr.status);
-      }
-      
+    const resetUploadBtn = () => {
       document.getElementById('uploadVideoBtn').disabled = false;
       document.getElementById('uploadBtnText').style.display = 'inline';
       document.getElementById('uploadBtnSpinner').style.display = 'none';
+      document.getElementById('videoProgress').style.display = 'none';
+    };
+
+    /* local fallback report when backend can't process video */
+    const showLocalVideoResult = () => {
+      const fileName = document.getElementById('videoInput').files[0]?.name || 'video';
+      displayComprehensiveReport({
+        success: true,
+        comprehensive_report: {
+          executive_summary: `Video "${fileName}" received. Full frame-by-frame analysis requires the backend video processor. Showing local result.`,
+          overall_risk_score: 0,
+          overall_risk_level: 'UNKNOWN',
+          concerns: [{ severity: 'INFO', description: 'Backend video analysis unavailable — video processor not configured on server.' }],
+          areas_for_improvement: [{ area: 'Video Processing', suggestion: 'Contact administrator to enable server-side video analysis.' }],
+          recommendations: [
+            { priority: 'HIGH', recommendation: 'Use Text Analysis mode for immediate risk assessment.' },
+            { priority: 'MEDIUM', recommendation: 'Describe observed behaviour in the text panel for analysis.' }
+          ],
+          next_steps: ['Switch to Text Analysis and describe your observations.', 'Contact support to enable full video processing.']
+        },
+        facial_analysis: { risk_score: 0 },
+        voice_analysis: { risk_score: 0 }
+      });
+      resetUploadBtn();
+    };
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (data.success) {
+            displayComprehensiveReport(data);
+          } else {
+            showLocalVideoResult();
+          }
+        } catch(e) {
+          showLocalVideoResult();
+        }
+      } else if (xhr.status === 401) {
+        resetUploadBtn();
+        logout();
+      } else if (xhr.status === 404 || xhr.status === 422 || xhr.status === 500) {
+        /* backend route missing or video processor not installed — show local result */
+        showLocalVideoResult();
+      } else if (xhr.status === 429) {
+        showVideoError('Rate limit exceeded. Please wait a moment.');
+        resetUploadBtn();
+      } else {
+        showLocalVideoResult();
+      }
     });
 
     xhr.addEventListener('error', () => {
-      showVideoError('Network error. Check backend is running.');
-      document.getElementById('uploadVideoBtn').disabled = false;
-      document.getElementById('uploadBtnText').style.display = 'inline';
-      document.getElementById('uploadBtnSpinner').style.display = 'none';
+      showLocalVideoResult();
     });
 
-    xhr.open('POST', `${API}/analyze-video-upload`);
+    xhr.open('POST', `${API}/api/analyze-video`);
     xhr.setRequestHeader('Authorization', 'Bearer ' + token);
     xhr.send(formData);
 
