@@ -10,7 +10,11 @@
    same API_BASE constant.
    ============================================================ */
 
-const API_BASE = (
+/* Root URL — no trailing slash, no /api suffix */
+const _API_ROOT = (
   (typeof __VITE_API_URL__ !== 'undefined' && __VITE_API_URL__)
   || 'https://safesignal-api-prod.onrender.com'
 );
+
+/* API_BASE includes /api — used by analysis.js, camera.js and dashboard.html */
+const API_BASE = _API_ROOT + '/api';

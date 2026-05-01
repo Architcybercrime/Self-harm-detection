@@ -98,7 +98,11 @@ function _localClassify(text) {
 }
 
 /* ── API CONFIG ── */
-const API_BASE = 'https://safesignal-api.onrender.com/api';
+/* API_BASE comes from config.js (loaded before this script in index.html) */
+/* Fallback in case config.js not loaded */
+if (typeof API_BASE === 'undefined') {
+  window.API_BASE = 'https://safesignal-api-prod.onrender.com/api';
+}
 let authToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
 let _backendOnline = false;
 
