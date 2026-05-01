@@ -22,20 +22,6 @@ services:
       retries: 3
       start_period: 60s
 
-  streamlit:
-    build: .
-    command: streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
-    ports:
-      - "8501:8501"
-    env_file:
-      - backend/.env
-    environment:
-      - API_URL=http://backend:8000
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-
 volumes:
   model_data:
   log_data:
