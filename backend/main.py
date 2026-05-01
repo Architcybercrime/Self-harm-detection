@@ -202,7 +202,15 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-# ── HEALTH ───────────────────────────────────────────
+# ── ROOT + HEALTH ────────────────────────────────────
+@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
+def root():
+    """Root / health shortcut — redirects to /api/health info."""
+    return {"status": "running", "service": "Self Harm Detection API",
+            "version": "2.0.0", "docs": "/docs", "health": "/api/health"}
+
+
 @app.get("/api/health", tags=["Health"])
 def health(request: Request):
     """Check API health status"""
