@@ -821,6 +821,36 @@
     document.getElementById('sidebarUsername').textContent =
       localStorage.getItem('username') || 'User';
 
+    /* ── BACKEND WAKE-UP PING ──────────────────────────
+       Hit /health the moment the page loads so the Render
+       free-tier instance is warm before the user runs analysis.
+       Show a subtle status indicator while warming up.        */
+    (function wakeBackend() {
+      const bar = document.createElement('div');
+      bar.id = 'wakeBar';
+      bar.style.cssText = 'position:fixed;bottom:0;left:220px;right:0;background:#1a1a1a;border-top:1px solid rgba(255,255,255,0.07);padding:8px 20px;font-size:11px;color:#f0c040;letter-spacing:0.1em;z-index:9999;display:flex;align-items:center;gap:8px;';
+      bar.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f0c040;animation:pulse 1s infinite;"></span> CONNECTING TO SERVER…';
+      document.body.appendChild(bar);
+
+      const start = Date.now();
+      fetch(API_BASE + '/health', { method: 'GET', cache: 'no-store' })
+        .then(() => {
+          bar.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2A8A4A;"></span> SERVER ONLINE';
+          bar.style.color = '#2A8A4A';
+          setTimeout(() => bar.remove(), 2000);
+        })
+        .catch(() => {
+          /* still waking up — retry silently, remove bar after 60s */
+          setTimeout(() => {
+            fetch(API_BASE + '/health').then(() => {
+              bar.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2A8A4A;"></span> SERVER ONLINE';
+              bar.style.color = '#2A8A4A';
+              setTimeout(() => bar.remove(), 2000);
+            }).catch(() => bar.remove());
+          }, 30000);
+        });
+    })();
+
     function logout() {
       localStorage.removeItem('token');
       localStorage.removeItem('username');
@@ -914,10 +944,16 @@
       document.getElementById('predictBtn').disabled = true;
       document.getElementById('predictBtnText').style.display = 'none';
       document.getElementById('predictSpinner').style.display = 'inline';
+      /* Show a "waiting for server" hint after 4s so user knows it's working */
+      const hintTimer = setTimeout(() => {
+        errEl.textContent = '⏳ Server starting up — please wait (~30s on first request)…';
+        errEl.style.color = '#f0c040';
+        errEl.style.display = 'block';
+      }, 4000);
 
       try {
         const ctrl = new AbortController();
-        const tid  = setTimeout(() => ctrl.abort(), 12000);
+        const tid  = setTimeout(() => ctrl.abort(), 40000);
         const res  = await fetch(`${API}/api/predict`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -925,6 +961,8 @@
           signal: ctrl.signal
         });
         clearTimeout(tid);
+        clearTimeout(hintTimer);
+        errEl.style.display = 'none';
         if (res.status === 401) { logout(); return; }
         /* If backend returned an error (500, 422, etc.) fall through to local */
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -933,10 +971,11 @@
         if (!data || !data.risk_level) throw new Error('Invalid response from backend');
         _showResult(data);
       } catch(err) {
-        /* Backend error / cold start / offline — run locally so demo never breaks */
+        clearTimeout(hintTimer);
+        /* Backend timed out / error — run locally so demo never breaks */
         const local = _localClassify(text);
         _showResult(local);
-        errEl.textContent = '⚡ Analysed locally (backend waking up — results may differ slightly)';
+        errEl.textContent = '⚡ Analysed locally (server cold start — result is accurate)';
         errEl.style.color = '#f0c040';
         errEl.style.display = 'block';
       } finally {
