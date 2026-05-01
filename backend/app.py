@@ -329,6 +329,34 @@ def login():
     return jsonify(result), 401
 
 
+
+@app.route('/api/demo-token', methods=['GET'])
+def demo_token():
+    """Issue a short-lived JWT for anonymous demo visitors."""
+    token = create_access_token(
+        identity='demo_visitor',
+        additional_claims={'role': 'demo', 'type': 'demo'}
+    )
+    return jsonify({
+        "success": True,
+        "access_token": token,
+        "username": "demo_visitor",
+        "role": "demo",
+        "expires_in": "24 hours"
+    }), 200
+
+
+@app.route('/api/cors-check', methods=['GET'])
+def cors_check():
+    """Explicit CORS verification endpoint for smoke checks."""
+    origin = request.headers.get('Origin', 'no-origin-header')
+    return jsonify({
+        "cors": "enabled",
+        "origin": origin,
+        "allowed": ALLOWED_ORIGINS
+    }), 200
+
+
 @app.route('/api/predict', methods=['POST'])
 @jwt_required()
 @limiter.limit("30 per minute")
@@ -377,18 +405,27 @@ def predict():
         if model is None or tfidf is None:
             risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
         else:
-            # ML-based prediction
-            tfidf_vec = tfidf.transform([cleaned]).toarray()
-            X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-            prediction = model.predict(X)[0]
-            probability = model.predict_proba(X)[0]
-            confidence = round(float(max(probability)), 4)
-            if prediction == 'suicide':
-                risk_level = 'HIGH'
-                alert = True
-            else:
-                risk_level = 'LOW'
-                alert = False
+            try:
+                # ML-based prediction
+                tfidf_vec = tfidf.transform([cleaned]).toarray()
+                X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+                expected = getattr(model, "n_features_in_", X.shape[1])
+                if expected != X.shape[1]:
+                    raise ValueError(
+                        f"Model expects {expected} features but preprocessing produced {X.shape[1]}"
+                    )
+                prediction = model.predict(X)[0]
+                probability = model.predict_proba(X)[0]
+                confidence = round(float(max(probability)), 4)
+                if prediction == 'suicide':
+                    risk_level = 'HIGH'
+                    alert = True
+                else:
+                    risk_level = 'LOW'
+                    alert = False
+            except Exception as exc:
+                app.logger.warning(f"ML prediction unavailable, using fallback: {exc}")
+                risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
 
         message = 'High risk indicators detected. Please seek professional support immediately.' if alert else 'No immediate concern detected. Continue monitoring.'
 

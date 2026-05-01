@@ -38,32 +38,3 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
 
-  # ── Streamlit Dashboard ──────────────────────────
-  - type: web
-    name: safesignal-dashboard
-    runtime: python
-    buildCommand: pip install -r backend/requirements.txt && pip install streamlit altair && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('stopwords')"
-    startCommand: streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
-    rootDir: .
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
-      - key: JWT_SECRET_KEY
-        fromService:
-          name: safesignal-api
-          type: web
-          envVarKey: JWT_SECRET_KEY
-      - key: API_URL
-        fromService:
-          name: safesignal-api
-          type: web
-          property: hostURL
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: PYTHON_VERSION
-        value: "3.11.0"
-    autoDeploy: true
