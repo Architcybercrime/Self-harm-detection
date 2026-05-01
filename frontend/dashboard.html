@@ -954,7 +954,7 @@
       try {
         const ctrl = new AbortController();
         const tid  = setTimeout(() => ctrl.abort(), 40000);
-        const res  = await fetch(`${API}/api/predict`, {
+        const res  = await fetch(`${API}/predict`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ text }),
@@ -1470,7 +1470,7 @@ async function uploadVideo() {
       showLocalVideoResult();
     });
 
-    xhr.open('POST', `${API}/api/analyze-video`);
+    xhr.open('POST', `${API}/analyze-video`);
     xhr.setRequestHeader('Authorization', 'Bearer ' + token);
     xhr.send(formData);
 
