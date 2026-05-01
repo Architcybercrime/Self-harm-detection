@@ -926,10 +926,14 @@
         });
         clearTimeout(tid);
         if (res.status === 401) { logout(); return; }
+        /* If backend returned an error (500, 422, etc.) fall through to local */
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        /* Validate response has required field — otherwise treat as error */
+        if (!data || !data.risk_level) throw new Error('Invalid response from backend');
         _showResult(data);
       } catch(err) {
-        /* Backend cold / offline — run locally so the demo never breaks */
+        /* Backend error / cold start / offline — run locally so demo never breaks */
         const local = _localClassify(text);
         _showResult(local);
         errEl.textContent = '⚡ Analysed locally (backend waking up — results may differ slightly)';
