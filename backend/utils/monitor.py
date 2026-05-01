@@ -21,15 +21,7 @@ def setup_logs():
 
 
 def log_prediction(text_length, risk_level, confidence, sentiment_score):
-    """Log every prediction for monitoring."""
-    setup_logs()
-
-    try:
-        with open(LOG_FILE, 'r') as f:
-            logs = json.load(f)
-    except:
-        logs = []
-
+    """Log every prediction for monitoring (in-memory safe — silently skips file I/O if read-only FS)."""
     entry = {
         "timestamp":   datetime.datetime.now().isoformat(),
         "text_length": text_length,
@@ -37,10 +29,18 @@ def log_prediction(text_length, risk_level, confidence, sentiment_score):
         "confidence":  confidence,
         "sentiment":   sentiment_score
     }
-    logs.append(entry)
-
-    with open(LOG_FILE, 'w') as f:
-        json.dump(logs, f, indent=2)
+    try:
+        setup_logs()
+        try:
+            with open(LOG_FILE, 'r') as f:
+                logs = json.load(f)
+        except Exception:
+            logs = []
+        logs.append(entry)
+        with open(LOG_FILE, 'w') as f:
+            json.dump(logs, f, indent=2)
+    except Exception:
+        pass  # Read-only filesystem on Render — skip file write, prediction still succeeds
 
 
 def get_trend_analysis(logs, window=10):
