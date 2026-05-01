@@ -1,0 +1,40 @@
+services:
+  # ── FastAPI Backend (new clean service) ──────────
+  - type: web
+    name: safesignal-api-prod
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')" && python download_models.py && python run_migrations.py
+    startCommand: uvicorn main:socket_app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://self-harm-detection.vercel.app,https://frontend-lime-three-65.vercel.app
+      - key: MFA_ISSUER
+        value: SafeSignal
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        value: alerts@safesignal.app
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        value: whatsapp:+14155238886
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    healthCheckPath: /api/health
+    autoDeploy: true
+

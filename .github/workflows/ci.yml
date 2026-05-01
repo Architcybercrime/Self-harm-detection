@@ -1,0 +1,83 @@
+name: CI — Self Harm Detection API
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────
+  lint:
+    name: Lint (Flake8 + isort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install linting tools
+        run: pip install flake8 isort
+      - name: Flake8 — style & syntax
+        run: |
+          flake8 backend/ \
+            --max-line-length=120 \
+            --exclude=backend/data,backend/logs,backend/reports \
+            --ignore=E501,W503,E402
+      - name: isort — import ordering
+        run: isort --check-only --diff backend/ --skip backend/data
+
+  # ─────────────────────────────────────────────────────
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
+    needs: lint
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      JWT_SECRET_KEY: ci-test-secret-key-not-for-production
+      SUPABASE_URL:   ""
+      SUPABASE_KEY:   ""
+      ALLOWED_ORIGINS: "http://localhost:3000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            fastapi uvicorn[standard] python-jose[cryptography] bcrypt \
+            python-dotenv pydantic httpx requests \
+            pytest pytest-asyncio pytest-cov starlette \
+            slowapi python-socketio python-multipart \
+            nltk scikit-learn numpy scipy joblib \
+            supabase sendgrid twilio pyotp qrcode[pil] \
+            reportlab shap flake8
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('vader_lexicon', quiet=True)"
+
+      - name: Run pytest with coverage
+        run: |
+          pytest tests/test_api.py -v --tb=short \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=60
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage.xml

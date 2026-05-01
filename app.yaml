@@ -1,0 +1,30 @@
+runtime: python311
+
+env: standard
+entrypoint: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8080 --timeout 300 --access-logfile - --error-logfile - backend.wsgi:app
+
+env_variables:
+  ENVIRONMENT: "production"
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  MAX_UPLOAD_SIZE: "500"
+  LOG_LEVEL: "INFO"
+  # Set these secrets in Google Cloud Console:
+  # - JWT_SECRET_KEY
+  # - SUPABASE_URL
+  # - SUPABASE_KEY
+
+handlers:
+- url: /api/.*
+  script: auto
+  secure: always
+
+- url: /static/.*
+  static_files: frontend\3*
+  upload: frontend/.*
+  secure: always
+
+- url: /.*
+  static_files: frontend/index.html
+  upload: frontend/index\.html
+  secure: always

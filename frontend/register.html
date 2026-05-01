@@ -213,8 +213,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
   <script>
-    const API = 'http://127.0.0.1:5000/api';
+    const API = API_BASE + '/api';
 
     /* If already logged in, skip to dashboard */
     if (localStorage.getItem('token')) {
@@ -268,6 +269,9 @@
       label.style.color    = val.length ? l.bg : 'transparent';
     }
 
+    /* Pre-warm backend so it's ready when user clicks register */
+    fetch(API + '/health', { method: 'GET' }).catch(() => {});
+
     /* Show alert message */
     function showAlert(msg, type = 'error') {
       const box = document.getElementById('alertBox');
@@ -277,10 +281,14 @@
         box.style.background  = 'rgba(194,0,47,0.15)';
         box.style.color       = '#ff6b8a';
         box.style.borderColor = '#C2002F';
-      } else {
+      } else if (type === 'success') {
         box.style.background  = 'rgba(42,138,74,0.15)';
         box.style.color       = '#6fcf97';
         box.style.borderColor = '#2A8A4A';
+      } else { /* info */
+        box.style.background  = 'rgba(212,160,23,0.15)';
+        box.style.color       = '#f0c040';
+        box.style.borderColor = '#D4A017';
       }
     }
 
@@ -332,9 +340,25 @@
       setLoading(true);
       document.getElementById('alertBox').style.display = 'none';
 
+      /* Retry-aware fetch — Render free tier needs ~30 s to wake */
+      async function fetchWithRetry(url, options, retries = 4) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const ctrl = new AbortController();
+            const tid  = setTimeout(() => ctrl.abort(), 35000); // 35 s per attempt
+            const res  = await fetch(url, { ...options, signal: ctrl.signal });
+            clearTimeout(tid);
+            return res;
+          } catch (e) {
+            if (attempt === retries) throw e;
+            showAlert(`Server starting up… attempt ${attempt}/${retries}. Please wait (~30 s on first load).`, 'info');
+            await new Promise(r => setTimeout(r, 10000));
+          }
+        }
+      }
+
       try {
-        // Send registration request to Archit's backend
-        const response = await fetch(`${API}/register`, {
+        const response = await fetchWithRetry(`${API}/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -343,16 +367,16 @@
         const data = await response.json();
 
         if (response.ok) {
-          // SUCCESS: account created, redirect to login
-          showAlert('Account created successfully! Redirecting to login...', 'success');
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          showAlert('Account created! Redirecting to login…', 'success');
           setTimeout(() => window.location.href = 'login.html', 1200);
         } else {
-          // Backend error — username probably already taken
-          showAlert(data.message || data.error || 'Registration failed. Try a different username.');
+          showAlert(data.detail || data.message || data.error || 'Registration failed. Try a different username.');
         }
 
       } catch (err) {
-        showAlert('Cannot connect to server. Make sure the backend is running on port 5000.');
+        showAlert('Backend unreachable after 3 attempts. The server is sleeping — wait 30 s and try again.');
       } finally {
         setLoading(false);
       }

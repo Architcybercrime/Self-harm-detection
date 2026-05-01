@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    environment:
+      - PORT=8000
+    volumes:
+      # Persist trained model files across restarts
+      - model_data:/app/model
+      - log_data:/app/logs
+      - report_data:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  model_data:
+  log_data:
+  report_data:

@@ -21,6 +21,7 @@
   width: 12px;
   height: 12px;
   background: var(--text);
+   background: #fff;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
@@ -343,3 +344,27 @@ nav {
   .hero-title { font-size: clamp(44px, 18vw, 80px); }
   .dark-chapter-title { font-size: clamp(48px, 20vw, 80px); }
 }
+
+/* ── BIO TAB CONTENT ── */
+.bio-tab-content {
+  margin-top: 24px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+.bio-tab-content.fading {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.bio-steps { display: flex; flex-direction: column; gap: 14px; }
+.bio-step { display: flex; align-items: flex-start; gap: 16px; }
+.step-num { font-family: var(--condensed); font-size: 11px; font-weight: 900; color: var(--red); letter-spacing: 0.1em; flex-shrink: 0; margin-top: 2px; }
+.step-text { font-family: var(--condensed); font-size: 14px; font-weight: 600; letter-spacing: 0.05em; color: var(--text); line-height: 1.5; }
+.bio-stat { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.bio-stat:last-child { border-bottom: none; }
+.stat-number { font-family: var(--condensed); font-size: 28px; font-weight: 900; color: var(--red); line-height: 1; }
+.stat-desc { font-family: var(--condensed); font-size: 13px; font-weight: 600; letter-spacing: 0.05em; color: var(--text); }
+.bio-image { transition: transform 0.6s ease; }
+.bio-image.zoomed { transform: scale(1.04); }
+.bio-tab-reset { font-family: var(--condensed); font-size: 11px; letter-spacing: 0.15em; color: var(--muted); cursor: pointer; margin-top: 8px; display: none; }
+.bio-tab-reset:hover { color: var(--red); }

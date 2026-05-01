@@ -49,12 +49,17 @@
           <div class="bio-section">
             <div class="bio-image-wrap"><div class="bio-image"></div></div>
             <div class="bio-text">
-              <p data-i18n="bio-p1">Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
-              <p data-i18n="bio-p2">Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
-              <div class="bio-tabs">
-                <div class="bio-tab active"><div class="dot"></div><span data-i18n="tab-how">HOW IT WORKS</span></div>
-                <div class="bio-tab"><div class="dot" style="background:var(--muted)"></div><span data-i18n="tab-stats">STATS</span></div>
+             <div id="bioDefault">
+                <p data-i18n="bio-p1">Every year, millions of people express distress through text — in messages, journals, and social posts. Most go unnoticed. SafeSignal was built to change that.</p>
+                <p data-i18n="bio-p2">Using natural language processing trained on clinical datasets, the system identifies linguistic patterns associated with self-harm ideation — not just keywords, but context, sentiment, and semantic clusters — with the accuracy that matters when lives are at stake.</p>
               </div>
+              <div class="bio-tabs">
+                <div class="bio-tab active" onclick="bioSwitch('how')"><div class="dot"></div><span data-i18n="tab-how">HOW IT WORKS</span></div>
+                <div class="bio-tab" onclick="bioSwitch('stats')"><div class="dot" style="background:var(--muted)"></div><span data-i18n="tab-stats">STATS</span></div>
+                <div class="bio-tab-reset" onclick="bioReset()">↩ back</div>
+              </div>
+              <div class="bio-tab-content" id="bioContent">
+                
             </div>
           </div>
           <div class="hs-hint"><span data-i18n="hint-scroll">SCROLL</span>
@@ -69,6 +74,24 @@
           <div class="red-rect red-rect-1" id="redRect1"></div>
           <div class="red-rect red-rect-2" id="redRect2"></div>
           <div class="redblock-number">AI</div>
+          <div class="redblock-stats" id="redblockStats">
+            <div class="rb-stat">
+              <div class="rb-num">92.2%</div>
+              <div class="rb-label">Model Accuracy</div>
+            </div>
+            <div class="rb-stat">
+              <div class="rb-num">50K</div>
+              <div class="rb-label">Training Samples</div>
+            </div>
+            <div class="rb-stat">
+              <div class="rb-num">232K</div>
+              <div class="rb-label">Dataset Rows</div>
+            </div>
+            <div class="rb-stat">
+              <div class="rb-num">3,000</div>
+              <div class="rb-label">TF-IDF Features</div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -79,24 +102,135 @@
   </div>
 
   <!-- SECTION 4: CHAPTER / DETECTION (normal vertical scroll) -->
+  <!-- SECTION 4: CHAPTER / DETECTION -->
   <section class="chapter-section section-white">
     <div class="chapter-left reveal-left">
       <div class="chapter-label"><div class="dot"></div><div class="chapter-label-text" data-i18n="ch-label">DETECTION</div></div>
       <div class="chapter-quote" data-i18n="ch-quote">"The words we choose reveal more about our state of mind than we realise."</div>
-      <div class="chapter-small-img"></div>
+
+      <!-- Option 3: Animated text analysis mockup -->
+      <div class="analysis-mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot red"></div>
+          <div class="mockup-dot yellow"></div>
+          <div class="mockup-dot green"></div>
+          <span class="mockup-title">safesignal — analysis</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-label">// INPUT</div>
+          <div class="mockup-input" id="mockupInput"></div>
+          <div class="mockup-label" style="margin-top:16px;">// RESULT</div>
+          <div class="mockup-result" id="mockupResult">
+            <span class="mockup-risk" id="mockupRisk"></span>
+            <div class="mockup-score-wrap"><div class="mockup-score-bar" id="mockupScoreBar"></div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="chapter-right">
-      <div class="chapter-right-img"></div>
-      <div class="chapter-body reveal" data-i18n="ch-body">A system that learns the subtle grammar of distress: the shift from "I feel tired" to "I feel nothing". Pattern recognition that goes deeper than any keyword list.</div>
+
+      <div class="chapter-body reveal" data-i18n="ch-body">A system that learns the subtle grammar of distress — the shift from <em>"I feel tired"</em> to <em>"I feel nothing"</em>. Pattern recognition that goes deeper than any keyword list.</div>
+
+      <!-- Option 2: Capability cards -->
+      <div class="capability-cards">
+        <div class="cap-card reveal">
+          <div class="cap-icon">📝</div>
+          <div class="cap-title">TEXT PATTERNS</div>
+          <div class="cap-desc">NLP model scans for linguistic distress markers, tone shifts, and semantic risk clusters in written text.</div>
+        </div>
+        <div class="cap-card reveal" style="transition-delay:0.1s">
+          <div class="cap-icon">😐</div>
+          <div class="cap-title">FACIAL CUES</div>
+          <div class="cap-desc">DeepFace detects micro-expressions and affective states through real-time camera feed analysis.</div>
+        </div>
+        <div class="cap-card reveal" style="transition-delay:0.2s">
+          <div class="cap-icon">🎤</div>
+          <div class="cap-title">VOICE MARKERS</div>
+          <div class="cap-desc">Librosa captures pitch stress, tremor, speech rate, and vocal energy from microphone input.</div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <!-- SECTION 5: PHOTO GRID (normal vertical) -->
-  <section class="section-white photo-grid-section">
-    <div class="photo-grid">
-      <div class="photo-card photo-card-1 reveal"><div class="photo-img photo-img-1"></div></div>
-      <div class="photo-card photo-card-2 reveal" style="transition-delay:0.15s"><div class="photo-img photo-img-2"></div></div>
+  <!-- SECTION 5: FEATURE CARDS -->
+  <!-- SECTION 5: FEATURE CARDS — alternating magazine layout -->
+  <section class="section-white feature-cards-section">
+
+    <!-- Card 1: visual left, text right -->
+    <div class="fc-row reveal">
+      <div class="fc-visual fc-visual-1">
+        <div class="fc-visual-number">01</div>
+        <div class="fc-visual-tag">MULTIMODAL</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">MULTIMODAL DETECTION</div>
+        <div class="fc-title">Three signals.<br>One verdict.</div>
+        <div class="fc-body">SafeSignal combines text, facial expression, and voice tone into a single unified risk score — no single modality can fool the system.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">NLP</span>
+          <span class="fc-pill">DeepFace</span>
+          <span class="fc-pill">Librosa</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Card 2: text left, visual right -->
+    <div class="fc-row fc-row-reverse reveal">
+      <div class="fc-visual fc-visual-2">
+        <div class="fc-visual-number">02</div>
+        <div class="fc-visual-tag">REAL-TIME</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">REAL-TIME ANALYSIS</div>
+        <div class="fc-title">Instant results.<br>Live alerts.</div>
+        <div class="fc-body">Risk scores are generated in real time via a REST API. When HIGH risk is detected, WebSocket alerts fire instantly — no polling, no delay.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">Flask API</span>
+          <span class="fc-pill">Socket.IO</span>
+          <span class="fc-pill">JWT Auth</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: visual left, text right -->
+    <div class="fc-row reveal">
+      <div class="fc-visual fc-visual-3">
+        <div class="fc-visual-number">03</div>
+        <div class="fc-visual-tag">ML MODEL</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">ML MODEL</div>
+        <div class="fc-title">92.2% accurate.<br>Clinically trained.</div>
+        <div class="fc-body">Logistic Regression model trained on 232,074 real-world samples from the Kaggle Suicide Detection dataset, using TF-IDF and VADER sentiment features.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">Logistic Regression</span>
+          <span class="fc-pill">TF-IDF</span>
+          <span class="fc-pill">VADER</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: text left, visual right -->
+    <div class="fc-row fc-row-reverse reveal">
+      <div class="fc-visual fc-visual-4">
+        <div class="fc-visual-number">04</div>
+        <div class="fc-visual-tag">SECURE</div>
+      </div>
+      <div class="fc-text">
+        <div class="fc-label">SECURE & PRIVATE</div>
+        <div class="fc-title">Protected by design.<br>Not an afterthought.</div>
+        <div class="fc-body">Every endpoint is JWT-protected. Passwords are bcrypt hashed. Rate limiting, CORS restrictions, and Supabase Row Level Security keep all data safe.</div>
+        <div class="fc-pills">
+          <span class="fc-pill">JWT</span>
+          <span class="fc-pill">bcrypt</span>
+          <span class="fc-pill">Supabase RLS</span>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- HSCROLL 3: Photo Grid visible first → PRECISION slides in from RIGHT
@@ -111,7 +245,42 @@
           <div class="dark-red-shape-1"></div>
           <div class="dark-red-shape-2"></div>
           <div class="dark-red-line"></div>
-          <h2 class="dark-chapter-title" id="darkTitle">PRECISION</h2>
+          
+
+          <!-- Confusion matrix + accuracy bars overlay -->
+          <div class="precision-overlay">
+
+            <!-- Right: accuracy bars -->
+            <div class="precision-bars">
+              <div class="precision-bars-label">// MODEL PERFORMANCE</div>
+              <div class="pbar-row">
+                <div class="pbar-name">ACCURACY</div>
+                <div class="pbar-wrap"><div class="pbar" data-width="92.2"></div></div>
+                <div class="pbar-val">92.2%</div>
+              </div>
+              <div class="pbar-row">
+                <div class="pbar-name">PRECISION</div>
+                <div class="pbar-wrap"><div class="pbar" data-width="92"></div></div>
+                <div class="pbar-val">92%</div>
+              </div>
+              <div class="pbar-row">
+                <div class="pbar-name">RECALL</div>
+                <div class="pbar-wrap"><div class="pbar" data-width="92"></div></div>
+                <div class="pbar-val">92%</div>
+              </div>
+              <div class="pbar-row">
+                <div class="pbar-name">F1 SCORE</div>
+                <div class="pbar-wrap"><div class="pbar" data-width="92"></div></div>
+                <div class="pbar-val">0.92</div>
+              </div>
+              <div class="pbar-row">
+                <div class="pbar-name">CV F1</div>
+                <div class="pbar-wrap"><div class="pbar" data-width="92.18"></div></div>
+                <div class="pbar-val">0.9218</div>
+              </div>
+            </div>
+<h2 class="dark-chapter-title" id="darkTitle">PRECISION</h2>
+          </div>
         </section>
       </div>
     </div>
@@ -139,10 +308,36 @@
     <div class="streak" style="width:260px;height:5px;top:8%;left:10%;opacity:.20"></div>
     <div class="streak" style="width:150px;height:3px;top:58%;left:55%;opacity:.35"></div>
     <div class="streak" style="width:70px;height:2px;top:45%;left:90%;opacity:.40"></div>
-    <div class="float-card fc-1"><div class="float-card-img" style="background:linear-gradient(160deg,#3A4A6A,#1A2A4A)"></div></div>
-    <div class="float-card fc-2"><div class="float-card-img" style="background:linear-gradient(160deg,#6A2A2A,#3A1A1A)"></div></div>
-    <div class="racenight-car"><div class="car-body"></div></div>
-    <div class="racenight-caption">Dataset — Clinical NLP Research</div>
+    <!-- How to use — 3 step guide -->
+    <div class="howto-wrap">
+      <div class="howto-label">// HOW TO USE SAFESIGNAL</div>
+      <div class="howto-steps">
+
+        <div class="howto-step">
+          <div class="howto-num">01</div>
+          <div class="howto-icon">👤</div>
+          <div class="howto-title">REGISTER</div>
+          <div class="howto-desc">Create your account on the register page. Your data is encrypted and stored securely in Supabase.</div>
+          <div class="howto-arrow">→</div>
+        </div>
+
+        <div class="howto-step">
+          <div class="howto-num">02</div>
+          <div class="howto-icon">🔑</div>
+          <div class="howto-title">LOGIN</div>
+          <div class="howto-desc">Sign in to get your JWT token. Every session is protected and expires automatically after 24 hours.</div>
+          <div class="howto-arrow">→</div>
+        </div>
+
+        <div class="howto-step howto-step-last">
+          <div class="howto-num">03</div>
+          <div class="howto-icon">🔍</div>
+          <div class="howto-title">ANALYSE</div>
+          <div class="howto-desc">Use text, camera, or microphone to run a multimodal risk analysis. Results appear instantly.</div>
+        </div>
+
+      </div>
+    </div>
   </section>
 
   <!-- SECTION 8: ANALYSIS TOOL — 3 tabs: Text / Face / Voice -->
@@ -155,7 +350,7 @@
       </div>
 
       <h2 class="analyze-title reveal"><span data-i18n="analyze-title1">DETECT</span><br><span data-i18n="analyze-title2">SIGNALS</span></h2>
-      <div class="demo-note">⚠ DEMO MODE — Full analysis available after <a href="login.html">signing in</a></div>
+      <div id="backendStatus" style="font-size:11px;letter-spacing:0.15em;color:#D4A017;margin-bottom:16px;display:none;"></div>
       <!-- TAB SWITCHER -->
       <div class="analyze-tabs">
         <button class="analyze-tab active" data-tab="text">
@@ -176,7 +371,13 @@
             <p class="analyze-desc" data-i18n="text-desc">Paste any text below. The engine analyses linguistic markers, sentiment trajectory, and semantic context — returning a risk score and identified signals.</p>
             <label class="input-label" for="textInput" data-i18n="input-label">// INPUT TEXT</label>
             <textarea id="textInput" data-i18n-placeholder="text-placeholder" placeholder="Type or paste text here... (Ctrl+Enter to run)"></textarea>
-            <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> <span data-i18n="btn-run">RUN ANALYSIS</span></button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+              <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()"><span class="plus">+</span> <span data-i18n="btn-run">RUN ANALYSIS</span></button>
+              <button class="analyze-btn btn-outline" id="voiceInputBtn" onclick="toggleVoiceInput()" title="Speak to fill the text box">
+                <span id="voiceIcon">🎙</span> <span id="voiceLabel">SPEAK</span>
+              </button>
+            </div>
+            <p id="voiceStatus" style="font-size:11px;letter-spacing:0.15em;color:rgba(255,255,255,0.4);margin-top:8px;display:none;"></p>
           </div>
           <div>
             <div id="result">
@@ -267,6 +468,24 @@
                 <div class="emotion-row"><span class="emotion-name">FLAT AFFECT</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
                 <div class="emotion-row"><span class="emotion-name">VOCAL ENERGY</span><div class="emotion-bar-wrap"><div class="emotion-bar" style="width:0%"></div></div><span class="emotion-val">—</span></div>
               </div>
+              
+              <!-- TRANSCRIPTION & TEXT-BASED RISK -->
+              <div id="voiceTranscription" style="display:none; margin-top:20px; padding:12px; background:#f5f5f5; border-radius:4px; font-size:13px;">
+                <div style="font-weight:bold; margin-bottom:8px; color:#333;">TRANSCRIBED TEXT</div>
+                <div id="transcribedText" style="font-style:italic; color:#666; margin-bottom:12px; min-height:20px;">—</div>
+                
+                <div style="font-weight:bold; margin-bottom:8px; color:#333;">SEMANTIC RISK SIGNALS</div>
+                <div id="riskSignals" style="margin-bottom:12px;"></div>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+                  <div><span style="color:#999;">Acoustic Risk:</span> <span id="acousticRiskVal" style="font-weight:bold;">—</span></div>
+                  <div><span style="color:#999;">Text Risk:</span> <span id="textRiskVal" style="font-weight:bold;">—</span></div>
+                </div>
+                <div style="margin-top:8px; font-weight:bold;">
+                  <span style="color:#999;">Combined Risk:</span> <span id="combinedRiskVal" style="font-weight:bold;">—</span>
+                </div>
+              </div>
+              
               <div class="backend-badge">
                 <span class="badge-dot"></span>
                 <span data-i18n="backend-badge">BACKEND INTEGRATION IN PROGRESS</span>
@@ -282,23 +501,22 @@
   <!-- FOOTER -->
   <footer>
     <div class="footer-inner">
-      <div class="footer-logo">SAFE<span>SIGNAL</span></div>
-      <div class="footer-links">
-        <a class="footer-link" data-i18n="fl-system">The System</a><a class="footer-link" data-i18n="fl-dataset">Dataset</a>
-        <a class="footer-link" data-i18n="fl-research">The Research</a><a class="footer-link" data-i18n="fl-team">Team</a>
-        
-        
+      <div class="footer-top-row">
+        <div class="footer-lang">
+          <button class="lang-btn active">EN</button>
+          <button class="lang-btn">HI</button>
+          <button class="lang-btn">FR</button>
+        </div>
       </div>
-      
-      <div class="footer-copy">SAFESIGNAL — COLLEGE PROJECT — BUILT WITH GSAP + VANILLA JS</div>
-      <div class="footer-lang">
-        <button class="lang-btn active">EN</button>
-        <button class="lang-btn">HI</button>
-        <button class="lang-btn">FR</button>
+      <div class="footer-logo-big">SAFE<span>SIGNAL</span></div>
+      <div class="footer-tagline">AI-Based Self-Harm Detection System</div>
+      <div class="footer-divider"></div>
+      <div class="footer-bottom">
+        <div class="footer-copy">©2025 SAFESIGNAL — GLA UNIVERSITY — COLLEGE PROJECT</div>
       </div>
     </div>
   </footer>
-
-  <script src="main.js"></script>
+<script src="config.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

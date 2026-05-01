@@ -21,6 +21,7 @@ import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
 from flask_talisman import Talisman
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -40,14 +41,21 @@ from utils.fusion import fuse_risk_scores
 from utils.database import save_prediction, get_stats as db_get_stats, get_recent_predictions
 from utils.auth import register_user, login_user, setup_jwt
 from utils.validators import validate_text_input, validate_credentials, sanitize_text, validate_audio_duration
+from utils.video_processor import process_video_for_analysis
+from utils.multimodal_report import generate_multimodal_report
 
 app = Flask(__name__)
 
 # ── CORS CONFIGURATION (Production-Grade) ────────────
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
+  "http://127.0.0.1:3000",
     "http://127.0.0.1:5000",
     "http://localhost:5000",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+  "http://localhost:8000",
+  "http://127.0.0.1:8000",
     "null",  # For file:// protocol (local HTML)
     "https://self-harm-detection.vercel.app",
 ]
@@ -105,11 +113,18 @@ swagger = Swagger(app, template={
 try:
     model = joblib.load('model/risk_model.pkl')
     tfidf = joblib.load('model/tfidf_vectorizer.pkl')
-    print("✓ ML models loaded")
+    print("ML models loaded")
 except FileNotFoundError:
-    print("⚠️  Model files not found - using keyword-based fallback")
+    print("Model files not found - using keyword-based fallback")
     model = None
     tfidf = None
+
+# ── LOGGING CONFIGURATION (Production-ready) ────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+app.logger.setLevel(logging.INFO)
 
 prediction_log = []
 
@@ -122,6 +137,7 @@ def keyword_based_prediction(text, sentiment):
     # CRITICAL keywords (instant HIGH risk)
     critical_keywords = [
         'kill myself', 'kill me', 'end my life', 'want to die',
+      'want to disappear',
         'suicide', 'commit suicide', 'end it all', 'not worth living',
         'better off dead', 'take my life', 'ending my life',
         'no reason to live', 'want to end', 'hang myself',
@@ -165,6 +181,30 @@ def keyword_based_prediction(text, sentiment):
         alert = False
 
     return risk_level, round(confidence, 4), alert
+
+
+# ── HELPER: GENERATE REPORT WITH ERROR HANDLING ──────
+def generate_report_safe(facial_data=None, voice_data=None, text_data=None):
+    """Generate multimodal report with comprehensive error handling."""
+    try:
+        return generate_multimodal_report(
+            facial_data=facial_data or {},
+            voice_data=voice_data or {},
+            text_data=text_data or {}
+        )
+    except Exception as e:
+        app.logger.error(f"Report generation failed: {str(e)}", exc_info=True)
+        # Return minimal fallback report
+        return {
+            "executive_summary": "Analysis completed with limited reporting.",
+            "overall_risk_score": 0.5,
+            "overall_risk_level": "MEDIUM",
+            "findings": {"error": "Detailed report unavailable, but analysis completed."}
+        }
+
+
+# ── REQUEST SIZE LIMITS ──────────────────────────────
+app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_UPLOAD_SIZE', 500)) * 1024 * 1024  # Default 500MB
 
 
 # ── WEBSOCKET EVENTS ─────────────────────────────────
@@ -289,6 +329,34 @@ def login():
     return jsonify(result), 401
 
 
+
+@app.route('/api/demo-token', methods=['GET'])
+def demo_token():
+    """Issue a short-lived JWT for anonymous demo visitors."""
+    token = create_access_token(
+        identity='demo_visitor',
+        additional_claims={'role': 'demo', 'type': 'demo'}
+    )
+    return jsonify({
+        "success": True,
+        "access_token": token,
+        "username": "demo_visitor",
+        "role": "demo",
+        "expires_in": "24 hours"
+    }), 200
+
+
+@app.route('/api/cors-check', methods=['GET'])
+def cors_check():
+    """Explicit CORS verification endpoint for smoke checks."""
+    origin = request.headers.get('Origin', 'no-origin-header')
+    return jsonify({
+        "cors": "enabled",
+        "origin": origin,
+        "allowed": ALLOWED_ORIGINS
+    }), 200
+
+
 @app.route('/api/predict', methods=['POST'])
 @jwt_required()
 @limiter.limit("30 per minute")
@@ -322,78 +390,98 @@ def predict():
     if not data or 'text' not in data:
         return jsonify({"error": "text field is required"}), 400
 
-    text = sanitize_text(str(data['text']))
-    is_valid, errors = validate_text_input(text)
-    if not is_valid:
-        return jsonify({"error": errors[0]}), 400
+    try:
+        text = sanitize_text(str(data['text']))
+        is_valid, errors = validate_text_input(text)
+        if not is_valid:
+            return jsonify({"error": errors[0]}), 400
 
-    cleaned = full_preprocess(text)
-    scores = get_sentiment_scores(text)
-    sentiment = scores['compound']
-    neg_score = scores['neg']
+        cleaned = full_preprocess(text)
+        scores = get_sentiment_scores(text)
+        sentiment = scores['compound']
+        neg_score = scores['neg']
 
-    # Fallback prediction if model not available
-    if model is None or tfidf is None:
-        risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
-    else:
-        # ML-based prediction
-        tfidf_vec = tfidf.transform([cleaned]).toarray()
-        X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
-        prediction = model.predict(X)[0]
-        probability = model.predict_proba(X)[0]
-        confidence = round(float(max(probability)), 4)
-        if prediction == 'suicide':
-            risk_level = 'HIGH'
-            alert = True
+        # Fallback prediction if model not available
+        if model is None or tfidf is None:
+            risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
         else:
-            risk_level = 'LOW'
-            alert = False
+            try:
+                # ML-based prediction
+                tfidf_vec = tfidf.transform([cleaned]).toarray()
+                X = np.hstack([tfidf_vec, [[sentiment, neg_score]]])
+                expected = getattr(model, "n_features_in_", X.shape[1])
+                if expected != X.shape[1]:
+                    raise ValueError(
+                        f"Model expects {expected} features but preprocessing produced {X.shape[1]}"
+                    )
+                prediction = model.predict(X)[0]
+                probability = model.predict_proba(X)[0]
+                confidence = round(float(max(probability)), 4)
+                if prediction == 'suicide':
+                    risk_level = 'HIGH'
+                    alert = True
+                else:
+                    risk_level = 'LOW'
+                    alert = False
+            except Exception as exc:
+                app.logger.warning(f"ML prediction unavailable, using fallback: {exc}")
+                risk_level, confidence, alert = keyword_based_prediction(text, sentiment)
 
-    message = 'High risk indicators detected. Please seek professional support immediately.' if alert else 'No immediate concern detected. Continue monitoring.'
+        message = 'High risk indicators detected. Please seek professional support immediately.' if alert else 'No immediate concern detected. Continue monitoring.'
 
-    prediction_log.append({
-        "timestamp": datetime.datetime.now().isoformat(),
-        "risk_level": risk_level,
-        "confidence": confidence
-    })
-
-    log_prediction(
-        text_length=len(text.split()),
-        risk_level=risk_level,
-        confidence=confidence,
-        sentiment_score=round(sentiment, 4)
-    )
-
-    save_prediction(
-        text_input=text,
-        risk_level=risk_level,
-        confidence=confidence,
-        sentiment=round(sentiment, 4),
-        modality="text",
-        alert=alert
-    )
-
-    if alert:
-        socketio.emit('high_risk_alert', {
-            "risk_level": risk_level,
-            "confidence": confidence,
-            "message": message,
+        prediction_log.append({
             "timestamp": datetime.datetime.now().isoformat(),
-            "action": "Immediate professional consultation recommended"
+            "risk_level": risk_level,
+            "confidence": confidence
         })
 
-    return jsonify({
-        "risk_level": risk_level,
-        "confidence": confidence,
-        "alert_triggered": alert,
-        "sentiment_score": round(sentiment, 4),
-        "message": message,
-        "risk_indicators": {
-            "text_sentiment": "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
-            "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
-            "severity": "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
-        },
-        "recommendations": {
+        log_prediction(
+            text_length=len(text.split()),
+            risk_level=risk_level,
+            confidence=confidence,
+            sentiment_score=round(sentiment, 4)
+        )
+
+        save_prediction(
+            text_input=text,
+            risk_level=risk_level,
+            confidence=confidence,
+            sentiment=round(sentiment, 4),
+            modality="text",
+            alert=alert
+        )
+
+        if alert:
+            socketio.emit('high_risk_alert', {
+                "risk_level": risk_level,
+                "confidence": confidence,
+                "message": message,
+                "timestamp": datetime.datetime.now().isoformat(),
+                "action": "Immediate professional consultation recommended"
+            })
+
+        # Generate comprehensive report for text analysis
+        text_analysis_data = {
+            "text_risk_score": confidence,
+            "risk_level": risk_level,
+            "sentiment_score": round(sentiment, 4),
+            "sentiment_label": "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
+            "transcription": text[:100] + ("..." if len(text) > 100 else "")
+        }
+        comprehensive_report = generate_report_safe(text_data=text_analysis_data)
+
+        return jsonify({
+            "risk_level": risk_level,
+            "confidence": confidence,
+            "alert_triggered": alert,
+            "sentiment_score": round(sentiment, 4),
+            "message": message,
+            "risk_indicators": {
+                "text_sentiment": "negative" if sentiment < -0.3 else "neutral" if sentiment < 0.3 else "positive",
+                "confidence_level": "high" if confidence > 0.85 else "medium" if confidence > 0.65 else "low",
+                "severity": "critical" if confidence > 0.9 else "high" if confidence > 0.75 else "moderate"
+            },
+            "recommendations": {
             "immediate_action": alert,
             "support_resources": [
                 "iCall: 9152987821",
@@ -402,8 +490,13 @@ def predict():
             ] if alert else [],
             "follow_up": "Immediate professional consultation recommended" if alert else "Continue regular monitoring"
         },
+        "comprehensive_report": comprehensive_report,
         "analysis_timestamp": datetime.datetime.now().isoformat()
     }), 200
+    
+    except Exception as e:
+        app.logger.error(f"Text prediction error: {str(e)}", exc_info=True)
+        return jsonify({"error": "Analysis failed. Please try again.", "details": str(e)}), 500
 
 
 @app.route('/api/stats', methods=['GET'])
@@ -486,15 +579,34 @@ def analyze_face():
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    if 'image_base64' in data:
-        result = analyze_face_from_base64(data['image_base64'])
-        return jsonify(result), 200
+    try:
+        if 'image_base64' in data:
+            result = analyze_face_from_base64(data['image_base64'])
+            # Generate comprehensive report for facial analysis
+            facial_data = result.copy() if isinstance(result, dict) else {"risk_score": 0}
+            facial_data.setdefault('facial_risk_score', result.get('risk_score', 0.2) if isinstance(result, dict) else 0.2)
+            facial_data.setdefault('risk_level', result.get('risk_level', 'LOW') if isinstance(result, dict) else 'LOW')
+            facial_data.setdefault('dominant_emotion', result.get('emotion', 'neutral') if isinstance(result, dict) else 'neutral')
+            comprehensive_report = generate_report_safe(facial_data=facial_data)
+            result['comprehensive_report'] = comprehensive_report
+            return jsonify(result), 200
 
-    if data.get('use_webcam'):
-        result = capture_webcam_frame()
-        return jsonify(result), 200
+        if data.get('use_webcam'):
+            result = capture_webcam_frame()
+            # Generate comprehensive report for facial analysis
+            facial_data = result.copy() if isinstance(result, dict) else {"risk_score": 0}
+            facial_data.setdefault('facial_risk_score', result.get('risk_score', 0.2) if isinstance(result, dict) else 0.2)
+            facial_data.setdefault('risk_level', result.get('risk_level', 'LOW') if isinstance(result, dict) else 'LOW')
+            facial_data.setdefault('dominant_emotion', result.get('emotion', 'neutral') if isinstance(result, dict) else 'neutral')
+            comprehensive_report = generate_report_safe(facial_data=facial_data)
+            result['comprehensive_report'] = comprehensive_report
+            return jsonify(result), 200
 
-    return jsonify({"error": "Provide image_base64 or use_webcam:true"}), 400
+        return jsonify({"error": "Provide image_base64 or use_webcam:true"}), 400
+    
+    except Exception as e:
+        app.logger.error(f"Facial analysis error: {str(e)}", exc_info=True)
+        return jsonify({"error": "Facial analysis failed. Please try again.", "details": str(e)}), 500
 
 
 @app.route('/api/analyze-speech', methods=['POST'])
@@ -541,6 +653,79 @@ def analyze_speech():
         return jsonify(result), 200
 
     return jsonify({"error": "Provide audio_path or use_microphone:true"}), 400
+
+
+@app.route('/api/analyze-speech-upload', methods=['POST'])
+@jwt_required()
+@limiter.limit("20 per minute")
+def analyze_speech_upload():
+    """
+    Analyze uploaded speech audio clip (multipart/form-data)
+    ---
+    tags:
+      - Multimodal
+    security:
+      - Bearer: []
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: file
+        type: file
+        required: true
+        description: Audio file from browser recording
+    responses:
+      200:
+        description: Speech analysis result
+      400:
+        description: Invalid upload
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded", "success": False}), 400
+
+    upload = request.files['file']
+    if not upload or not upload.filename:
+        return jsonify({"error": "Empty file upload", "success": False}), 400
+
+    temp_dir = os.path.join('data', 'temp_audio')
+    os.makedirs(temp_dir, exist_ok=True)
+
+    filename = secure_filename(upload.filename)
+    if not filename:
+        filename = 'voice_upload.wav'
+
+    ext = os.path.splitext(filename)[1].lower() or '.wav'
+    temp_path = os.path.join(temp_dir, f"upload_{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}{ext}")
+
+    try:
+        upload.save(temp_path)
+        result = analyze_audio_file(temp_path)
+        if result.get('success'):
+            # Generate comprehensive report for voice analysis
+            voice_analysis_data = {
+                "speech_risk_score": result.get('risk_score', 0.2),
+                "acoustic_risk_score": result.get('risk_score', 0.2),
+                "text_risk_score": result.get('risk_score', 0.2),
+                "transcription": result.get('transcription', ''),
+                "language": result.get('language', 'en-US'),
+                "risk_signals": result.get('risk_signals', []),
+                "tempo_bpm": result.get('tempo', 100),
+                "avg_pitch_hz": result.get('pitch', 150),
+                "energy_level": result.get('energy', 0.5)
+            }
+            comprehensive_report = generate_report_safe(voice_data=voice_analysis_data)
+            result['comprehensive_report'] = comprehensive_report
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        app.logger.error(f"Speech upload error: {str(e)}", exc_info=True)
+        return jsonify({"error": "Speech analysis failed. Please try again.", "details": str(e), "success": False}), 500
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError as cleanup_err:
+                app.logger.warning(f"Failed to cleanup {temp_path}: {str(cleanup_err)}")
 
 
 @app.route('/api/predict-multimodal', methods=['POST'])
@@ -655,6 +840,144 @@ def predict_multimodal():
             })
 
     return jsonify(final_result), 200
+
+
+@app.route('/api/analyze-video-upload', methods=['POST'])
+@jwt_required()
+@limiter.limit("10 per minute")
+def analyze_video_upload():
+    """
+    Upload video file and perform multimodal analysis with therapist-style report generation.
+    Returns comprehensive analysis + professional report.
+    ---
+    tags:
+      - Multimodal
+    security:
+      - Bearer: []
+    parameters:
+      - in: formData
+        name: file
+        type: file
+        required: true
+        description: Video file (MP4, MOV, AVI, etc.)
+      - in: formData
+        name: language
+        type: string
+        required: false
+        default: en-US
+        description: Language code for speech recognition (en-US, hi-IN, pa-IN, etc.)
+    responses:
+      200:
+        description: Multimodal video analysis + therapist-style report
+    """
+    from utils.video_processor import process_video_for_analysis
+    from utils.multimodal_report import generate_multimodal_report
+    
+    if 'file' not in request.files:
+        return jsonify({"error": "No video file provided"}), 400
+    
+    upload = request.files['file']
+    if upload.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    # Validate video file type
+    allowed_extensions = {'.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.webm'}
+    file_ext = os.path.splitext(upload.filename)[1].lower()
+    if file_ext not in allowed_extensions:
+        return jsonify({"error": f"Unsupported video format. Allowed: {', '.join(allowed_extensions)}"}), 400
+    
+    language = request.form.get('language', 'en-US')
+    temp_dir = 'temp_audio'
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    filename = secure_filename(upload.filename)
+    ext = os.path.splitext(filename)[1].lower() or '.mp4'
+    temp_path = os.path.join(temp_dir, f"upload_{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}{ext}")
+    
+    try:
+        # Emit progress: upload received
+        socketio.emit('upload_progress', {"stage": "received", "progress": 10})
+        app.logger.info(f"Video upload started: {filename}")
+        
+        upload.save(temp_path)
+        socketio.emit('upload_progress', {"stage": "processing", "progress": 30})
+        
+        # Process video: extract audio + frames, run multimodal analysis
+        video_analysis = process_video_for_analysis(temp_path, language=language)
+        socketio.emit('upload_progress', {"stage": "analyzed", "progress": 70})
+        
+        if not video_analysis.get('success'):
+            error_msg = video_analysis.get('error', 'Video analysis failed')
+            app.logger.error(f"Video analysis failed for {filename}: {error_msg}")
+            return jsonify({"error": error_msg, "success": False}), 400
+        
+        # Generate comprehensive multimodal report
+        facial_data = video_analysis.get('facial_analysis', {})
+        voice_data = video_analysis.get('voice_analysis', {})
+        
+        # Ensure we have complete data structures
+        facial_data.setdefault('facial_risk_score', 0.2)
+        facial_data.setdefault('risk_level', 'LOW')
+        facial_data.setdefault('dominant_emotion', 'neutral')
+        facial_data.setdefault('emotions', {})
+        
+        voice_data.setdefault('speech_risk_score', 0.2)
+        voice_data.setdefault('acoustic_risk_score', 0.2)
+        voice_data.setdefault('text_risk_score', 0.2)
+        voice_data.setdefault('transcription', 'No transcription available')
+        voice_data.setdefault('language', language)
+        voice_data.setdefault('risk_signals', [])
+        voice_data.setdefault('tempo_bpm', 100)
+        voice_data.setdefault('avg_pitch_hz', 150)
+        voice_data.setdefault('energy_level', 0.5)
+        voice_data.setdefault('interpretation', '')
+        
+        # Generate comprehensive report with error handling
+        comprehensive_report = generate_report_safe(facial_data, voice_data, {})
+        socketio.emit('upload_progress', {"stage": "report_generated", "progress": 85})
+        
+        # Save prediction
+        save_prediction(
+            text_input=f"Video Analysis - {filename}",
+            risk_level=comprehensive_report.get('overall_risk_level', 'LOW'),
+            confidence=comprehensive_report.get('overall_risk_score', 0),
+            sentiment=0.0,
+            modality="multimodal_video",
+            alert=comprehensive_report.get('overall_risk_level', 'LOW') in ['HIGH', 'CRITICAL']
+        )
+        
+        # Emit alert if high risk
+        if comprehensive_report.get('overall_risk_level', 'LOW') in ['HIGH', 'CRITICAL']:
+            socketio.emit('high_risk_alert', {
+                "risk_level": comprehensive_report.get('overall_risk_level'),
+                "confidence": comprehensive_report.get('overall_risk_score'),
+                "modality": "multimodal_video",
+                "message": f"Video Analysis Alert: {comprehensive_report.get('overall_risk_level')} RISK DETECTED",
+                "timestamp": datetime.datetime.now().isoformat()
+            })
+        
+        socketio.emit('upload_progress', {"stage": "complete", "progress": 100})
+        app.logger.info(f"Video analysis completed successfully: {filename}")
+        
+        return jsonify({
+            "success": True,
+            "video_metadata": video_analysis.get('video_metadata'),
+            "facial_analysis": facial_data,
+            "voice_analysis": voice_data,
+            "comprehensive_report": comprehensive_report
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Video upload error: {str(e)}", exc_info=True)
+        socketio.emit('upload_error', {"error": str(e)})
+        return jsonify({"error": "Video analysis failed. Please try a different file.", "details": str(e), "success": False}), 500
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+                app.logger.debug(f"Cleaned up temporary file: {temp_path}")
+            except OSError as cleanup_err:
+                app.logger.warning(f"Failed to cleanup {temp_path}: {str(cleanup_err)}")
 
 
 @app.route('/api/history', methods=['GET'])
