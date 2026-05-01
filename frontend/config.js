@@ -12,5 +12,5 @@
 
 const API_BASE = (
   (typeof __VITE_API_URL__ !== 'undefined' && __VITE_API_URL__)
-  || 'https://safesignal-api-prod.onrender.com'
+  || 'https://safesignal-api.onrender.com'
 );
