@@ -917,8 +917,8 @@
 
       try {
         const ctrl = new AbortController();
-        const tid  = setTimeout(() => ctrl.abort(), 12000);
-        const res  = await fetch(`${API}/api/predict`, {
+        const tid  = setTimeout(() => ctrl.abort(), 40000);
+        const res  = await fetch(`${API}/predict`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ text }),
@@ -1170,7 +1170,7 @@
           /* also try backend with transcript */
           const tok = localStorage.getItem('token');
           if (tok) {
-            fetch(`${API}/api/predict`, {
+            fetch(`${API}/predict`, {
               method:'POST',
               headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
               body: JSON.stringify({text: transcript || 'voice recording'})
@@ -1437,7 +1437,7 @@ async function uploadVideo() {
       showLocalVideoResult();
     });
 
-    xhr.open('POST', `${API}/api/analyze-video`);
+    xhr.open('POST', `${API}/analyze-video`);
     xhr.setRequestHeader('Authorization', 'Bearer ' + token);
     xhr.send(formData);
 
