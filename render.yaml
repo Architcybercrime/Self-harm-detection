@@ -1,10 +1,10 @@
 services:
-  # ── FastAPI Backend ──────────────────────────────
+  # ── FastAPI Backend (new clean service) ──────────
   - type: web
-    name: safesignal-api
-    runtime: python
+    name: safesignal-api-prod
+    runtime: docker
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python -c "import nltk; nltk.download('vader_lexicon'); nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')" && python download_models.py && python run_migrations.py
+    dockerfilePath: ./Dockerfile
     startCommand: uvicorn main:socket_app --host 0.0.0.0 --port $PORT
     envVars:
       - key: SUPABASE_URL
