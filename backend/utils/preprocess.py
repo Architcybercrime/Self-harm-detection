@@ -1,14 +1,37 @@
 import re
 import nltk
+import os
 
-nltk.download('vader_lexicon')
-nltk.download('stopwords')
-nltk.download('wordnet')
-nltk.download('punkt')
+# Download NLTK data safely — silently skip if filesystem is read-only (Render)
+for _corpus in ('vader_lexicon', 'stopwords', 'wordnet', 'punkt', 'punkt_tab'):
+    try:
+        nltk.download(_corpus, quiet=True)
+    except Exception:
+        pass  # Read-only FS on Render — data was pre-downloaded at build time
 
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+try:
+    from nltk.sentiment.vader import SentimentIntensityAnalyzer
+    _sia = SentimentIntensityAnalyzer()
+    VADER_AVAILABLE = True
+except Exception:
+    _sia = None
+    VADER_AVAILABLE = False
+
+try:
+    from nltk.corpus import stopwords as _sw
+    _STOPS = set(_sw.words('english')) - {'not', 'no', 'never', 'nobody', 'nothing'}
+    STOPWORDS_AVAILABLE = True
+except Exception:
+    _STOPS = set()
+    STOPWORDS_AVAILABLE = False
+
+try:
+    from nltk.stem import WordNetLemmatizer
+    _lem = WordNetLemmatizer()
+    LEMMATIZER_AVAILABLE = True
+except Exception:
+    _lem = None
+    LEMMATIZER_AVAILABLE = False
 
 
 def clean_text(text):
@@ -23,26 +46,27 @@ def clean_text(text):
 
 def remove_stopwords(text):
     """Remove common words but keep negations."""
-    stops = set(stopwords.words('english'))
-    stops.discard('not')
-    stops.discard('no')
-    stops.discard('never')
-    stops.discard('nobody')
-    stops.discard('nothing')
+    if not _STOPS:
+        return text  # NLTK stopwords unavailable — skip step
     words = text.split()
-    return ' '.join([w for w in words if w not in stops])
+    return ' '.join([w for w in words if w not in _STOPS])
 
 
 def lemmatize_text(text):
     """Reduce words to root form."""
-    lem = WordNetLemmatizer()
-    return ' '.join([lem.lemmatize(w) for w in text.split()])
+    if _lem is None:
+        return text  # NLTK lemmatizer unavailable — skip step
+    return ' '.join([_lem.lemmatize(w) for w in text.split()])
 
 
 def get_sentiment_scores(text):
-    """Get VADER sentiment scores."""
-    sia = SentimentIntensityAnalyzer()
-    return sia.polarity_scores(text)
+    """Get VADER sentiment scores. Returns neutral scores if VADER unavailable."""
+    if _sia is None:
+        return {'compound': 0.0, 'pos': 0.0, 'neg': 0.0, 'neu': 1.0}
+    try:
+        return _sia.polarity_scores(text)
+    except Exception:
+        return {'compound': 0.0, 'pos': 0.0, 'neg': 0.0, 'neu': 1.0}
 
 
 def full_preprocess(text):
