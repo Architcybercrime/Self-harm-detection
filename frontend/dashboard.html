@@ -830,16 +830,41 @@
     /* ── LOCAL CLASSIFIER (instant fallback) ── */
     function _localClassify(text) {
       const t = text.toLowerCase();
-      const H = ['suicide','suicidal','kill myself','want to die','end my life','hang myself','overdose','slit my wrists','cut myself','kms','not worth living','better off dead','ending my life','take my life'];
-      const M = ['hopeless','helpless','worthless','burden','give up','no point','pointless','trapped','no escape','wanna die','meaningless','empty inside','depressed','cant go on'];
-      const L = ['sad','crying','lonely','alone','tired','exhausted','anxious','scared','broken','numb','stressed','lost'];
+      /* HIGH — direct self-harm / suicidal language (present OR past tense) */
+      const H = [
+        'suicide','suicidal',
+        'kill myself','killing myself','killed myself',
+        'want to die','wanted to die','wants to die',
+        'wanna die','gonna die',
+        'end my life','ending my life','ended my life',
+        'take my life','taking my life',
+        'hang myself','hanging myself',
+        'overdose','slit my wrists','cut myself','cutting myself',
+        'kms','kys','not worth living','better off dead',
+        'no reason to live','cant live anymore',"can't live anymore",
+        'rather be dead','wish i was dead','wish i were dead',
+        'hurt myself','hurting myself','self harm','self-harm'
+      ];
+      /* MEDIUM — severe distress, ideation without explicit plan */
+      const M = [
+        'hopeless','helpless','worthless','i am a burden','i am burden',
+        'give up','giving up','no point','pointless',
+        'trapped','no escape','no way out',
+        'meaningless','empty inside','feel empty',
+        'depressed','depression','cant go on',"can't go on",
+        'dont want to be here',"don't want to be here",
+        'disappear forever','wish i could disappear'
+      ];
+      /* LOW — general distress signals */
+      const L = ['sad','crying','cry','lonely','alone','tired','exhausted','anxious','scared','broken','numb','stressed','lost','miserable','unhappy','down'];
       let h=0,m=0,l=0;
-      H.forEach(p=>{if(t.includes(p))h+=p.includes(' ')?3:2;});
-      M.forEach(p=>{if(t.includes(p))m+=1;});
+      H.forEach(p=>{if(t.includes(p))h+=p.split(' ').length>=3?3:2;});
+      M.forEach(p=>{if(t.includes(p))m+=p.split(' ').length>=3?2:1;});
       L.forEach(p=>{if(t.includes(p))l+=0.5;});
       const score = Math.min(h*0.25+m*0.1+l*0.04, 1);
-      let level='LOW', conf=Math.max(0.72,0.72-score*0.2);
-      if(h>=1||m>=2){level='HIGH';conf=Math.min(0.95,0.78+score);}
+      let level='LOW', conf=Math.max(0.65,0.72-score*0.2);
+      if(h>=1){level='HIGH';conf=Math.min(0.95,0.82+score*0.1);}
+      else if(m>=2||h>=1){level='HIGH';conf=Math.min(0.90,0.78+score);}
       else if(m>=1||l>=2){level='MEDIUM';conf=Math.min(0.80,0.65+score);}
       return {risk_level:level,confidence:parseFloat(conf.toFixed(4)),alert_triggered:level==='HIGH',
         sentiment_score:level==='HIGH'?-0.7:level==='MEDIUM'?-0.35:0.2,
@@ -893,7 +918,7 @@
       try {
         const ctrl = new AbortController();
         const tid  = setTimeout(() => ctrl.abort(), 12000);
-        const res  = await fetch(`${API}/predict`, {
+        const res  = await fetch(`${API}/api/predict`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ text }),
